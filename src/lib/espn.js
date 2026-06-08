@@ -33,9 +33,11 @@ function statusFromState(statusType, displayClock) {
   }
 }
 
+// Always rendered in Colombia time (America/Bogota), regardless of the
+// timezone of the machine running this code (e.g. Vercel's servers run in UTC).
 function kickoffTime(dateIso) {
   try {
-    return new Date(dateIso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+    return new Date(dateIso).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", timeZone: "America/Bogota" });
   } catch {
     return "";
   }
@@ -43,7 +45,7 @@ function kickoffTime(dateIso) {
 
 function kickoffDate(dateIso) {
   try {
-    return new Date(dateIso).toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+    return new Date(dateIso).toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota" });
   } catch {
     return "";
   }

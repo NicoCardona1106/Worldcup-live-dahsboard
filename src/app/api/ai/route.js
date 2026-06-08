@@ -43,7 +43,7 @@ async function buildContext() {
 }
 
 function buildSystemPrompt({ matches, groups, stats, scorers, matchesAreLive, groupsAreLive, statsAreLive, scorersAreLive }) {
-  const today = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const today = new Date().toLocaleDateString("es-CO", { weekday: "long", day: "2-digit", month: "long", year: "numeric", timeZone: "America/Bogota" });
 
   const dataNote =
     matchesAreLive || groupsAreLive
