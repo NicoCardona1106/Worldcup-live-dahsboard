@@ -1,5 +1,5 @@
-import { matches as placeholderMatches, groups as placeholderGroups, tournamentStats, topScorers, matchEvents } from "@/lib/data";
-import { fetchScoreboard, fetchStandings } from "@/lib/espn";
+import { matches as placeholderMatches, groups as placeholderGroups, tournamentStats as placeholderStats, topScorers as placeholderScorers, matchEvents } from "@/lib/data";
+import { fetchScoreboard, fetchStandings, fetchTournamentOverview, fetchTopScorers } from "@/lib/espn";
 
 // Serverless proxy to the Anthropic Claude API. Runs on the server (Vercel
 // function) so the API key never reaches the browser. Configure it by setting
@@ -9,24 +9,40 @@ async function buildContext() {
   // Try ESPN's live World Cup data first; fall back to the bundled sample
   // data (and tell the model it's a sample) if the upstream API has nothing
   // yet — e.g. before the tournament kicks off.
-  const [scoreboard, standings] = await Promise.allSettled([fetchScoreboard(), fetchStandings()]);
+  const [scoreboard, standings, overview] = await Promise.allSettled([
+    fetchScoreboard(),
+    fetchStandings(),
+    fetchTournamentOverview(),
+  ]);
 
   const liveMatches = scoreboard.status === "fulfilled" ? scoreboard.value.matches : [];
   const liveGroups = standings.status === "fulfilled" ? standings.value : {};
+  const liveOverview = overview.status === "fulfilled" ? overview.value : null;
 
   const hasLiveMatches = liveMatches.length > 0;
   const hasLiveGroups = Object.keys(liveGroups).length > 0;
+  const hasLiveStats = !!liveOverview?.hasPlayedMatches;
+
+  // Top scorers need an extra round-trip (per-match summaries), so only fetch
+  // them when there's actually something to find — otherwise it'd be wasted
+  // requests on every chat message before the tournament has any goals.
+  const liveScorers = hasLiveStats ? await fetchTopScorers(liveOverview.playedOrLiveIds).catch(() => []) : [];
+  const hasLiveScorers = liveScorers.length > 0;
 
   return {
     isLive: hasLiveMatches || hasLiveGroups,
     matches: hasLiveMatches ? liveMatches : placeholderMatches,
     groups: hasLiveGroups ? liveGroups : placeholderGroups,
+    stats: hasLiveStats ? liveOverview.stats : placeholderStats,
+    scorers: hasLiveScorers ? liveScorers : placeholderScorers,
     matchesAreLive: hasLiveMatches,
     groupsAreLive: hasLiveGroups,
+    statsAreLive: hasLiveStats,
+    scorersAreLive: hasLiveScorers,
   };
 }
 
-function buildSystemPrompt({ matches, groups, matchesAreLive, groupsAreLive }) {
+function buildSystemPrompt({ matches, groups, stats, scorers, matchesAreLive, groupsAreLive, statsAreLive, scorersAreLive }) {
   const today = new Date().toLocaleDateString("es-AR", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
 
   const dataNote =
@@ -76,11 +92,11 @@ ${JSON.stringify(matchEvents, null, 2)}
 TABLA DE GRUPOS (${groupsAreLive ? "EN VIVO — ESPN" : "DE MUESTRA"}):
 ${JSON.stringify(groups, null, 2)}
 
-GOLEADORES (DE MUESTRA):
-${JSON.stringify(topScorers, null, 2)}
+GOLEADORES (${scorersAreLive ? "EN VIVO — ESPN, calculados de los goles reales del torneo" : "DE MUESTRA — todavía no se jugó ningún partido del Mundial 2026"}):
+${JSON.stringify(scorers, null, 2)}
 
-ESTADÍSTICAS DEL TORNEO (DE MUESTRA):
-${JSON.stringify(tournamentStats, null, 2)}
+ESTADÍSTICAS DEL TORNEO (${statsAreLive ? "EN VIVO — ESPN" : "DE MUESTRA — el contador real arranca en 0 hasta que se juegue el primer partido"}):
+${JSON.stringify(stats, null, 2)}
 
 Si te preguntan algo fuera de estos datos (otros deportes, temas generales, etc.) podés responder
 con tu conocimiento general, pero siempre mantené el tono de un relator/analista de fútbol.

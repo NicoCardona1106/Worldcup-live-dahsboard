@@ -4,7 +4,7 @@ import { useState } from "react";
 import Reveal from "./Reveal";
 import Counter from "./Counter";
 import TeamBadge from "./TeamBadge";
-import { useLiveStandings } from "@/hooks/useLiveData";
+import { useLiveStandings, useLiveTournamentStats, useLiveTopScorers } from "@/hooks/useLiveData";
 import { groups as placeholderGroups, tournamentStats, topScorers } from "@/lib/data";
 
 function GroupTable({ name, teams }) {
@@ -45,15 +45,22 @@ function GroupTable({ name, teams }) {
 }
 
 function TopScorers() {
-  const max = Math.max(...topScorers.map((s) => s.goals));
+  const { data: liveScorers, live } = useLiveTopScorers();
+  const scorers = live ? liveScorers : topScorers;
+  const max = Math.max(...scorers.map((s) => s.goals));
   return (
     <Reveal className="liquid-glass px-6 sm:px-8 py-7">
-      <h3 className="font-anton text-2xl tracking-wide mb-5">GOLEADORES</h3>
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <h3 className="font-anton text-2xl tracking-wide">GOLEADORES</h3>
+        <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
+          {live ? "● EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
+        </span>
+      </div>
       <ul className="space-y-4">
-        {topScorers.map((s, i) => (
+        {scorers.map((s, i) => (
           <li key={s.name} className="flex items-center gap-4">
             <span className="font-anton text-cream/40 w-5 text-right">{i + 1}</span>
-            <span className="text-xl">{s.flag}</span>
+            <TeamBadge flag={s.flag} size="text-xl" />
             <span className="font-mono text-sm flex-1 truncate">{s.name}</span>
             <div className="w-24 sm:w-32 stat-bar">
               <span className="bg-gold" data-bar={(s.goals / max) * 100} style={{ width: "0%" }} />
@@ -70,6 +77,8 @@ export default function StandingsSection() {
   const [tab, setTab] = useState("clasificacion");
   const { data: groups, live } = useLiveStandings(placeholderGroups);
   const groupNames = Object.keys(groups);
+  const { data: liveStats, live: statsLive } = useLiveTournamentStats();
+  const stats = statsLive ? liveStats : tournamentStats;
 
   return (
     <section id="grupos" className="relative py-28 sm:py-36 bg-bgnavy">
@@ -117,8 +126,14 @@ export default function StandingsSection() {
         )}
 
         {/* Tournament statistics */}
+        <div className="mb-5 flex items-center gap-3">
+          <h3 className="font-anton text-xl tracking-wide text-cream/70">NÚMEROS DEL TORNEO</h3>
+          <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${statsLive ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
+            {statsLive ? "● EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
+          </span>
+        </div>
         <div id="estadisticas" className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          {tournamentStats.map((s) => (
+          {stats.map((s) => (
             <Reveal key={s.label} className="liquid-glass text-center px-6 py-10 transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-[0_0_28px_rgba(111,255,0,0.18)]">
               <p className={`font-anton text-5xl sm:text-7xl ${s.color} tabular-nums`}>
                 <Counter target={s.value} />

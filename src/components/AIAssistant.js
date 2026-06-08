@@ -14,7 +14,8 @@ const MIC_ERROR_MESSAGES = {
   "service-not-allowed": "Necesito permiso para usar el micrófono. Habilitalo en la configuración del sitio y probá de nuevo.",
   "no-speech": "No te escuché bien. Acercate al micrófono y probá de nuevo.",
   "audio-capture": "No encuentro un micrófono disponible. Revisá que esté conectado y con permisos.",
-  network: "Hubo un problema de conexión con el reconocimiento de voz. Probá de nuevo en un momento.",
+  network:
+    "No pude conectarme con el servicio de reconocimiento de voz. Si usás Brave u otro navegador con bloqueadores de privacidad fuertes, puede que esté frenando ese servicio: probá bajando los Shields para este sitio (ícono del león en la barra de direcciones) o usá el micrófono desde Chrome o Edge.",
 };
 
 export default function AIAssistant() {

@@ -6,6 +6,7 @@
 
 const SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
 const STANDINGS_URL = "https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings";
+const SUMMARY_URL = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/summary";
 
 const STAGE_LABELS = {
   "group-stage": "FASE DE GRUPOS",
@@ -150,6 +151,97 @@ export async function fetchBracket() {
     title: stageLabel(slug),
     matches: byStage[slug],
   }));
+}
+
+function formatAttendance(total) {
+  if (total >= 1_000_000) return `${(total / 1_000_000).toFixed(1)}M`;
+  if (total >= 1_000) return `${Math.round(total / 1000)}K`;
+  return String(total);
+}
+
+/**
+ * Fetches every fixture in the tournament window and rolls them up into the
+ * four headline numbers shown above the standings — all derived from real,
+ * already-played matches (ESPN's scoreboard doesn't expose stadium capacity,
+ * so "estadios llenos" isn't something we can compute honestly; total
+ * attendance is, and tells the same "how big is this thing" story).
+ * Also returns the ids of finished/in-progress matches so `fetchTopScorers`
+ * can pull goal scorers only from games that have actually been played.
+ */
+export async function fetchTournamentOverview() {
+  const res = await fetch(`${SCOREBOARD_URL}?dates=${TOURNAMENT_WINDOW}&limit=200`, { next: { revalidate: 300 } });
+  if (!res.ok) throw new Error(`ESPN tournament ${res.status}`);
+  const data = await res.json();
+  const events = data?.events || [];
+
+  let played = 0;
+  let goals = 0;
+  let attendance = 0;
+  const playedOrLiveIds = [];
+
+  for (const event of events) {
+    const comp = event?.competitions?.[0];
+    const state = comp?.status?.type?.state;
+    if (state !== "post" && state !== "in") continue;
+    playedOrLiveIds.push(event.id);
+    if (state !== "post") continue;
+    played += 1;
+    for (const c of comp?.competitors || []) goals += Number(c?.score) || 0;
+    attendance += Number(comp?.attendance) || 0;
+  }
+
+  const stats = [
+    { value: `${played}/${events.length}`, label: "PARTIDOS JUGADOS", color: "text-neon" },
+    { value: String(goals), label: "GOLES", color: "text-gold" },
+    { value: played ? (goals / played).toFixed(1) : "0.0", label: "PROMEDIO POR PARTIDO", color: "text-blue" },
+    { value: attendance ? formatAttendance(attendance) : "0", label: "ASISTENCIA TOTAL", color: "text-red" },
+  ];
+
+  return { stats, playedOrLiveIds, hasPlayedMatches: played > 0 };
+}
+
+/**
+ * ESPN's site API doesn't publish a tournament-wide "top scorers" leaderboard
+ * for the World Cup, so we build one ourselves from each played/live match's
+ * summary (`competitions[0].details`, where `scoringPlay: true` entries carry
+ * the scorer as `participants[0].athlete`). Own goals are excluded — they
+ * count for the table but never for an individual's tally. Capped to a
+ * handful of the most recent matches so this stays cheap even mid-tournament.
+ */
+export async function fetchTopScorers(eventIds) {
+  const ids = eventIds.slice(-20);
+  if (ids.length === 0) return [];
+
+  const settled = await Promise.allSettled(
+    ids.map((id) =>
+      fetch(`${SUMMARY_URL}?event=${id}`, { next: { revalidate: 600 } }).then((r) => (r.ok ? r.json() : null))
+    )
+  );
+
+  const tally = new Map();
+  for (const result of settled) {
+    if (result.status !== "fulfilled" || !result.value) continue;
+    const competition = result.value?.header?.competitions?.[0];
+    const details = competition?.details || [];
+    if (!details.length) continue;
+
+    const logoByTeamId = {};
+    for (const c of competition?.competitors || []) {
+      if (c?.team?.id) logoByTeamId[c.team.id] = c.team.logo || c.team.logos?.[0]?.href || null;
+    }
+
+    for (const play of details) {
+      if (!play?.scoringPlay || play?.ownGoal) continue;
+      const athlete = play?.participants?.[0]?.athlete;
+      const name = athlete?.shortName || athlete?.displayName;
+      if (!name) continue;
+      const entry = tally.get(name) || { name, flag: logoByTeamId[play?.team?.id] || null, goals: 0 };
+      entry.goals += 1;
+      tally.set(name, entry);
+    }
+  }
+
+  return [...tally.values()].sort((a, b) => b.goals - a.goals).slice(0, 5);
 }
 
 /** Maps one ESPN standings `entry` into the shape our group tables expect. */

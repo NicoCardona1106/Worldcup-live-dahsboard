@@ -61,3 +61,17 @@ export function useLiveStandings(placeholder, { pollMs = 5 * 60_000 } = {}) {
 export function useLiveBracket({ pollMs = 5 * 60_000 } = {}) {
   return useLiveData("/api/bracket", (body) => body?.rounds, [], pollMs);
 }
+
+// Headline tournament numbers (matches played, goals, average, attendance) —
+// computed from real played fixtures, so they read "0" until the first match
+// has actually been played rather than showing invented totals.
+export function useLiveTournamentStats({ pollMs = 5 * 60_000 } = {}) {
+  return useLiveData("/api/stats", (body) => body?.stats, [], pollMs);
+}
+
+// Top scorers — built from goal events in played/live matches, so it stays
+// empty (and the UI shows clearly-labelled sample names) until somebody has
+// actually scored a World Cup goal.
+export function useLiveTopScorers({ pollMs = 5 * 60_000 } = {}) {
+  return useLiveData("/api/stats", (body) => body?.topScorers, [], pollMs);
+}
