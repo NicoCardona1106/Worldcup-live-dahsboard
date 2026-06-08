@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
+import KickoffTime from "./KickoffTime";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches, matchEvents } from "@/lib/data";
 
@@ -24,7 +25,7 @@ function StatBar({ label, left, right, color, pct }) {
   );
 }
 
-function MatchCard({ m, expanded, onToggle }) {
+function MatchCard({ m, expanded, onToggle, delay = 0 }) {
   const live = m.status === "LIVE";
   const finished = m.status === "FINAL";
   const hasStats = Boolean(m.stats);
@@ -32,7 +33,7 @@ function MatchCard({ m, expanded, onToggle }) {
   const cornersPct = hasStats && m.stats.corners[0] + m.stats.corners[1] ? Math.round((m.stats.corners[0] / (m.stats.corners[0] + m.stats.corners[1])) * 100) : 50;
 
   return (
-    <Reveal className={`liquid-glass px-6 py-7 flex flex-col transition-shadow duration-300 ${live ? "neon-border" : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"}`}>
+    <Reveal delay={delay} className={`liquid-glass px-6 py-7 flex flex-col ${live ? "neon-border" : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"}`}>
       <div className="flex items-center justify-between mb-5 gap-2">
         <span className="font-anton text-[11px] tracking-[0.2em] text-cream/50 truncate">{m.group}</span>
         {live ? (
@@ -41,7 +42,7 @@ function MatchCard({ m, expanded, onToggle }) {
             EN VIVO
           </span>
         ) : (
-          <span className="font-mono text-[11px] tracking-widest text-cream/50 shrink-0">{finished ? "FINAL" : m.time}</span>
+          <KickoffTime time={finished ? "FINAL" : m.time} className="font-mono text-[11px] tracking-widest text-cream/50 shrink-0" />
         )}
       </div>
 
@@ -128,8 +129,8 @@ export default function MatchesSection() {
         </Reveal>
 
         <div id="partidos" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {matches.map((m) => (
-            <MatchCard key={m.id} m={m} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
+          {matches.map((m, i) => (
+            <MatchCard key={m.id} m={m} delay={i * 90} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
           ))}
         </div>
       </div>

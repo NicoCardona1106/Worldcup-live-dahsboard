@@ -7,9 +7,9 @@ import TeamBadge from "./TeamBadge";
 import { useLiveStandings, useLiveTournamentStats, useLiveTopScorers } from "@/hooks/useLiveData";
 import { groups as placeholderGroups, tournamentStats, topScorers } from "@/lib/data";
 
-function GroupTable({ name, teams }) {
+function GroupTable({ name, teams, delay = 0 }) {
   return (
-    <Reveal className="liquid-glass px-6 sm:px-8 py-7 transition-transform duration-300 hover:-translate-y-1">
+    <Reveal delay={delay} className="liquid-glass px-6 sm:px-8 py-7 hover:-translate-y-1">
       <h3 className="font-anton text-2xl tracking-wide mb-5">{name}</h3>
       <table className="w-full font-mono text-xs sm:text-sm">
         <thead>
@@ -115,8 +115,8 @@ export default function StandingsSection() {
 
         {tab === "clasificacion" ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-20">
-            {groupNames.map((name) => (
-              <GroupTable key={name} name={name} teams={groups[name]} />
+            {groupNames.map((name, i) => (
+              <GroupTable key={name} name={name} teams={groups[name]} delay={i * 90} />
             ))}
           </div>
         ) : (
@@ -133,8 +133,8 @@ export default function StandingsSection() {
           </span>
         </div>
         <div id="estadisticas" className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          {stats.map((s) => (
-            <Reveal key={s.label} className="liquid-glass text-center px-6 py-10 transition-transform duration-300 hover:-translate-y-1.5 hover:shadow-[0_0_28px_rgba(111,255,0,0.18)]">
+          {stats.map((s, i) => (
+            <Reveal key={s.label} delay={i * 80} className="liquid-glass text-center px-6 py-10 hover:-translate-y-1.5 hover:shadow-[0_0_28px_rgba(111,255,0,0.18)]">
               <p className={`font-anton text-5xl sm:text-7xl ${s.color} tabular-nums`}>
                 <Counter target={s.value} />
               </p>

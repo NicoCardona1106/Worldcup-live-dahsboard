@@ -11,6 +11,10 @@
   --font-anton: var(--font-anton), sans-serif;
   --font-condiment: "Condiment", cursive;
   --font-mono: var(--font-mono), monospace;
+
+  /* Shared easing tokens — one springy curve so every motion feels related. */
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
 html {
@@ -19,6 +23,12 @@ html {
 
 body {
   position: relative;
+}
+
+/* Anchor targets clear the fixed navbar instead of hiding behind it. */
+section[id],
+[id] {
+  scroll-margin-top: 6rem;
 }
 
 /* ===== Grain / noise overlay ===== */
@@ -52,6 +62,8 @@ body {
     border-radius: 1.25rem;
     position: relative;
     overflow: hidden;
+    /* A single shared transition so hovers on any glass surface ease the same way. */
+    transition: transform 0.5s var(--ease-out-soft), box-shadow 0.5s var(--ease-out-soft), border-color 0.5s var(--ease-out-soft);
   }
   .liquid-glass::before {
     content: "";
@@ -69,7 +81,7 @@ body {
   border-radius: 9999px;
   background: #6FFF00;
   box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.7);
-  animation: pulse-glow 1.6s infinite;
+  animation: pulse-glow 1.6s var(--ease-in-out-soft) infinite;
 }
 @keyframes pulse-glow {
   0% { box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.7); }
@@ -80,8 +92,15 @@ body {
 .neon-text {
   text-shadow: 0 0 12px rgba(111, 255, 0, 0.65), 0 0 28px rgba(111, 255, 0, 0.35);
 }
+
+/* Live cards softly breathe their neon glow so "EN VIVO" reads as alive. */
 .neon-border {
   box-shadow: 0 0 16px rgba(111, 255, 0, 0.35), inset 0 0 16px rgba(111, 255, 0, 0.08);
+  animation: neon-breathe 3.2s var(--ease-in-out-soft) infinite;
+}
+@keyframes neon-breathe {
+  0%, 100% { box-shadow: 0 0 14px rgba(111, 255, 0, 0.3), inset 0 0 14px rgba(111, 255, 0, 0.07); }
+  50% { box-shadow: 0 0 28px rgba(111, 255, 0, 0.55), inset 0 0 22px rgba(111, 255, 0, 0.13); }
 }
 
 .gradient-overlay-dark {
@@ -91,7 +110,7 @@ body {
 .scroll-hide::-webkit-scrollbar { display: none; }
 .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Animated stat bar */
+/* Animated stat bar — long, springy fill with a travelling sheen. */
 .stat-bar {
   height: 6px;
   border-radius: 9999px;
@@ -100,33 +119,76 @@ body {
 }
 .stat-bar > span {
   display: block;
+  position: relative;
   height: 100%;
   border-radius: 9999px;
-  transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+  transition: width 1.5s var(--ease-out-soft);
+}
+.stat-bar > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-100%);
+  animation: bar-sheen 2.6s var(--ease-in-out-soft) infinite;
+}
+@keyframes bar-sheen {
+  0% { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(180%); }
 }
 
 .bracket-line {
   border-color: rgba(111, 255, 0, 0.4);
 }
 
-/* Scroll reveal */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  transition: opacity 0.7s ease, transform 0.7s ease;
-}
-.reveal.in {
-  opacity: 1;
-  transform: translateY(0);
+/* ===== Scroll reveal =====
+   Eases up with a slight scale + blur so elements arrive softly rather than
+   snapping in. Driven by the IntersectionObserver in Reveal.js adding `.in`.
+
+   Lives in the `components` layer (like `.liquid-glass`) so Tailwind's `hover:`
+   transform utilities — which sit in the later `utilities` layer — can override
+   the settled `.in` transform. That keeps card hover-lifts working instead of
+   being frozen by the reveal's own transform. The transition also covers
+   box-shadow/border-color so those hovers ease on revealed cards too. */
+@layer components {
+  .reveal {
+    opacity: 0;
+    transform: translateY(34px) scale(0.985);
+    filter: blur(8px);
+    transition:
+      opacity 0.9s var(--ease-out-soft),
+      transform 0.9s var(--ease-out-soft),
+      filter 0.9s var(--ease-out-soft),
+      box-shadow 0.5s var(--ease-out-soft),
+      border-color 0.5s var(--ease-out-soft);
+    will-change: opacity, transform, filter;
+  }
+  .reveal.in {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
 }
 
-/* Floating / parallax helpers */
+/* Generic rise-in for elements not wired to the observer (e.g. carousel cards). */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.rise-in {
+  opacity: 0;
+  animation: rise-in 0.8s var(--ease-out-soft) forwards;
+}
+
+/* Floating / parallax helpers — drift + gentle rotation reads as "free floating". */
 @keyframes float-slow {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-14px); }
+  0%, 100% { transform: translate(0px, 0px) rotate(0deg); }
+  33% { transform: translate(9px, -16px) rotate(2deg); }
+  66% { transform: translate(-9px, -8px) rotate(-2deg); }
 }
 .float-slow {
-  animation: float-slow 6s ease-in-out infinite;
+  animation: float-slow 9s var(--ease-in-out-soft) infinite;
 }
 
 @keyframes spin-slow {
@@ -155,7 +217,7 @@ body {
   50% { box-shadow: 0 0 0 14px rgba(111, 255, 0, 0), 0 0 40px rgba(111, 255, 0, 0.8); }
 }
 .ai-orb {
-  animation: orb-pulse 2.4s ease-in-out infinite;
+  animation: orb-pulse 2.4s var(--ease-in-out-soft) infinite;
 }
 
 @keyframes mic-wave {
@@ -163,6 +225,22 @@ body {
   50% { transform: scaleY(1); }
 }
 .mic-bar {
-  animation: mic-wave 0.9s ease-in-out infinite;
+  animation: mic-wave 0.9s var(--ease-in-out-soft) infinite;
   transform-origin: center;
+}
+
+/* ===== Respect the user's reduced-motion preference ===== */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  /* Content must stay visible even if its entrance is suppressed. */
+  .reveal, .rise-in {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
 }
