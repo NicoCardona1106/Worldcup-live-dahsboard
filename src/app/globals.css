@@ -1,26 +1,168 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bgnavy: #010828;
+  --color-cream: #EFF4FF;
+  --color-neon: #6FFF00;
+  --color-gold: #FFD700;
+  --color-red: #FF4D4D;
+  --color-blue: #3BA4FF;
+
+  --font-anton: var(--font-anton), sans-serif;
+  --font-condiment: "Condiment", cursive;
+  --font-mono: var(--font-mono), monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  position: relative;
+}
+
+/* ===== Grain / noise overlay ===== */
+.grain-overlay {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 1s steps(4) infinite;
+}
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, -2%); }
+  50% { transform: translate(2%, 2%); }
+  75% { transform: translate(-1%, 1%); }
+}
+
+/* ===== Liquid glass =====
+   Lives in the `components` layer so Tailwind utilities (e.g. `fixed`,
+   `absolute`, `sticky`) always win the cascade and can override `position`. */
+@layer components {
+  .liquid-glass {
+    background: linear-gradient(135deg, rgba(239, 244, 255, 0.08), rgba(239, 244, 255, 0.02));
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(239, 244, 255, 0.14);
+    box-shadow: 0 8px 32px rgba(1, 8, 40, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-radius: 1.25rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(120deg, rgba(111, 255, 0, 0.06), transparent 40%, rgba(59, 164, 255, 0.06));
+    pointer-events: none;
+  }
+}
+
+/* ===== Live pulse ===== */
+.pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #6FFF00;
+  box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.7);
+  animation: pulse-glow 1.6s infinite;
+}
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(111, 255, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(111, 255, 0, 0); }
+}
+
+.neon-text {
+  text-shadow: 0 0 12px rgba(111, 255, 0, 0.65), 0 0 28px rgba(111, 255, 0, 0.35);
+}
+.neon-border {
+  box-shadow: 0 0 16px rgba(111, 255, 0, 0.35), inset 0 0 16px rgba(111, 255, 0, 0.08);
+}
+
+.gradient-overlay-dark {
+  background: linear-gradient(180deg, rgba(1, 8, 40, 0.55) 0%, rgba(1, 8, 40, 0.85) 65%, #010828 100%);
+}
+
+.scroll-hide::-webkit-scrollbar { display: none; }
+.scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Animated stat bar */
+.stat-bar {
+  height: 6px;
+  border-radius: 9999px;
+  background: rgba(239, 244, 255, 0.1);
+  overflow: hidden;
+}
+.stat-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.bracket-line {
+  border-color: rgba(111, 255, 0, 0.4);
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+.reveal.in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Floating / parallax helpers */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-14px); }
+}
+.float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.spin-slow {
+  animation: spin-slow 18s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #EFF4FF 0%, #6FFF00 50%, #EFF4FF 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 4s linear infinite;
+}
+
+/* AI orb */
+@keyframes orb-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.55), 0 0 24px rgba(111, 255, 0, 0.5); }
+  50% { box-shadow: 0 0 0 14px rgba(111, 255, 0, 0), 0 0 40px rgba(111, 255, 0, 0.8); }
+}
+.ai-orb {
+  animation: orb-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes mic-wave {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+.mic-bar {
+  animation: mic-wave 0.9s ease-in-out infinite;
+  transform-origin: center;
 }
