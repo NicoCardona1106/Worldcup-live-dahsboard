@@ -9,7 +9,7 @@
   --color-blue: #3BA4FF;
 
   --font-anton: var(--font-anton), sans-serif;
-  --font-condiment: "Condiment", cursive;
+  --font-condiment: var(--font-condiment), cursive;
   --font-mono: var(--font-mono), monospace;
 
   /* Shared easing tokens — one springy curve so every motion feels related. */

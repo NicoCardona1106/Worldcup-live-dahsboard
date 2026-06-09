@@ -1,4 +1,4 @@
-import { Anton, JetBrains_Mono } from "next/font/google";
+import { Anton, JetBrains_Mono, Condiment } from "next/font/google";
 import "./globals.css";
 
 const anton = Anton({
@@ -12,6 +12,12 @@ const mono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const condiment = Condiment({
+  variable: "--font-condiment",
+  weight: "400",
+  subsets: ["latin"],
+});
+
 export const metadata = {
   title: "WORLD CUP LIVE — Mundial 2026 Dashboard",
   description: "Dashboard inmersivo del Mundial 2026: resultados en vivo, partidos, grupos y estadísticas.",
@@ -19,11 +25,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es" className={`${anton.variable} ${mono.variable}`}>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link href="https://fonts.googleapis.com/css2?family=Condiment&display=swap" rel="stylesheet" />
-      </head>
+    <html lang="es" className={`${anton.variable} ${mono.variable} ${condiment.variable}`}>
       <body className="bg-bgnavy text-cream font-mono antialiased overflow-x-hidden">
         {children}
       </body>

@@ -43,6 +43,9 @@ export default function AIAssistant() {
   // Feature-detect the Web Speech API (Chrome/Edge/Safari support varies)
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    // One-time detection of a browser platform API on mount — there's no
+    // SSR-safe render-time equivalent, so this single sync setState is intentional.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSpeechSupported(Boolean(SpeechRecognition && window.speechSynthesis));
     if (!SpeechRecognition) return;
 

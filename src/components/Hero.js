@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef } from "react";
 import Reveal from "./Reveal";
 import LiveTicker from "./LiveTicker";
 import TeamBadge from "./TeamBadge";
-import KickoffTime from "./KickoffTime";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches } from "@/lib/data";
 
@@ -89,7 +88,7 @@ export default function Hero() {
         <LiveTicker matches={matches} />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 pt-10 w-full">
+      <div className="relative z-10 max-w-5xl mx-auto px-6 sm:px-10 pt-10 pb-16 w-full text-center">
         <Reveal>
           <p className="font-condiment text-3xl sm:text-5xl text-neon/90 mb-2">live football</p>
           <h1 className="font-anton text-6xl sm:text-8xl lg:text-[9rem] leading-[0.95] tracking-tight">
@@ -99,66 +98,76 @@ export default function Hero() {
 
         {/* Main scoreboard — driven by the live (or next-up) featured match */}
         {featured && (
-          <Reveal delay={120} className="mt-10 sm:mt-14 liquid-glass max-w-3xl px-6 sm:px-10 py-8 hover:scale-[1.01]">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                {featuredIsLive ? (
-                  <>
-                    <span className="pulse-dot" />
-                    <span className="font-anton text-xs sm:text-sm tracking-widest text-neon">EN VIVO</span>
-                  </>
-                ) : (
-                  <span className="font-anton text-xs sm:text-sm tracking-widest text-cream/50">PRÓXIMO PARTIDO</span>
-                )}
-              </div>
-              <div className="font-mono text-xs sm:text-sm text-cream/60 px-3 py-1 rounded-full border border-cream/20 truncate max-w-[55%] text-right">
+          <Reveal delay={120} className="mt-12 sm:mt-16 liquid-glass max-w-3xl mx-auto px-6 sm:px-12 py-10 hover:scale-[1.01]">
+            {/* Status + group/venue, centered */}
+            <div className="flex flex-col items-center gap-3">
+              {featuredIsLive ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="pulse-dot" />
+                  <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-neon">EN VIVO</span>
+                </span>
+              ) : (
+                <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-cream/50">PRÓXIMO PARTIDO</span>
+              )}
+              <span className="font-mono text-[11px] sm:text-xs text-cream/60 px-4 py-1.5 rounded-full border border-cream/15">
                 {featured.group}
                 {featured.venue ? ` · ${featured.venue}` : ""}
+              </span>
+            </div>
+
+            {/* Teams */}
+            <div className="mt-9 grid grid-cols-3 items-center gap-3 sm:gap-6">
+              <div className="flex flex-col items-center gap-2.5">
+                <div className="transition-transform hover:scale-110">
+                  <TeamBadge flag={featured.homeFlag ?? featured.homeLogo} size="text-5xl sm:text-7xl" />
+                </div>
+                <p className="font-anton text-sm sm:text-2xl tracking-wide">{featured.homeTeam.toUpperCase()}</p>
+              </div>
+
+              <div className="flex flex-col items-center justify-center gap-2">
+                {featuredIsLive || featured.status === "FINAL" ? (
+                  <>
+                    <p className="font-anton text-5xl sm:text-7xl tracking-tight tabular-nums">
+                      {featured.homeScore} <span className="text-cream/30">—</span> {featured.awayScore}
+                    </p>
+                    {featuredIsLive && featured.minute != null && (
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-xs tracking-widest text-red">
+                        <span className="pulse-dot" style={{ width: 6, height: 6, background: "#FF4D4D" }} />
+                        {featured.minute}&apos; EN VIVO
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <p className="font-anton text-4xl sm:text-6xl tracking-[0.15em] text-cream/30">VS</p>
+                )}
+              </div>
+
+              <div className="flex flex-col items-center gap-2.5">
+                <div className="transition-transform hover:scale-110">
+                  <TeamBadge flag={featured.awayFlag ?? featured.awayLogo} size="text-5xl sm:text-7xl" />
+                </div>
+                <p className="font-anton text-sm sm:text-2xl tracking-wide">{featured.awayTeam.toUpperCase()}</p>
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-3 items-center text-center gap-2">
-              <div>
-                <div className="mb-2 transition-transform hover:scale-110 inline-block">
-                  <TeamBadge flag={featured.homeFlag ?? featured.homeLogo} size="text-4xl sm:text-6xl" />
+            {/* Kickoff time — its own roomy, clearly-labelled block (scheduled only) */}
+            {!featuredIsLive && featured.status !== "FINAL" && featured.time && (
+              <div className="mt-9 flex justify-center">
+                <div className="inline-flex items-center gap-4 rounded-full border border-cream/15 bg-cream/5 px-7 py-3.5">
+                  <span className="text-lg sm:text-xl">🕐</span>
+                  <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{featured.time}</span>
+                  <span className="w-px h-6 bg-cream/20" />
+                  <span className="font-mono text-[10px] sm:text-xs tracking-[0.25em] text-cream/50">HORA COLOMBIA</span>
                 </div>
-                <p className="font-anton text-base sm:text-2xl tracking-wide">{featured.homeTeam.toUpperCase()}</p>
               </div>
-              <div>
-                <p className="font-anton text-5xl sm:text-7xl tracking-tighter tabular-nums">
-                  {featuredIsLive || featured.status === "FINAL" ? (
-                    <>
-                      {featured.homeScore} <span className="text-cream/40">—</span> {featured.awayScore}
-                    </>
-                  ) : (
-                    <KickoffTime time={featured.time} className="text-3xl sm:text-5xl text-cream/50" labelClass="text-[0.32em]" />
-                  )}
-                </p>
-                <p className="font-anton text-base sm:text-2xl tracking-wide mt-2">VS</p>
-              </div>
-              <div>
-                <div className="mb-2 transition-transform hover:scale-110 inline-block">
-                  <TeamBadge flag={featured.awayFlag ?? featured.awayLogo} size="text-4xl sm:text-6xl" />
-                </div>
-                <p className="font-anton text-base sm:text-2xl tracking-wide">{featured.awayTeam.toUpperCase()}</p>
-                {featuredIsLive && featured.minute != null && (
-                  <div className="inline-flex flex-col items-center gap-1 mt-2">
-                    <span className="font-anton text-xl sm:text-2xl text-neon neon-text tabular-nums">{featured.minute}&apos;</span>
-                    <span className="font-mono text-[10px] sm:text-xs tracking-widest text-red flex items-center gap-1">
-                      <span className="pulse-dot" style={{ width: 6, height: 6, background: "#FF4D4D" }} />
-                      EN VIVO
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Animated stat bars (only meaningful for a live match) */}
             {stats && (
-              <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-5">
+              <div className="mt-9 grid grid-cols-2 sm:grid-cols-4 gap-5 text-left">
                 {stats.map((s) => (
                   <div key={s.label}>
-                    <div className="flex justify-between font-mono text-[11px] text-cream/60 mb-1">
+                    <div className="flex justify-between font-mono text-[11px] text-cream/60 mb-1.5">
                       <span>{s.label}</span>
                       <span className="text-cream">{s.value}</span>
                     </div>
@@ -171,66 +180,12 @@ export default function Hero() {
             )}
 
             {!live && (
-              <p className="mt-6 font-mono text-[10px] tracking-widest text-cream/30">
-                MOSTRANDO DATOS DE MUESTRA — SE ACTUALIZARÁ SOLO CUANDO HAYA PARTIDOS DISPONIBLES EN LA API
+              <p className="mt-8 font-mono text-[10px] tracking-[0.2em] text-cream/30 leading-relaxed">
+                MOSTRANDO DATOS DE MUESTRA — SE ACTUALIZARÁ CUANDO HAYA PARTIDOS DISPONIBLES EN LA API
               </p>
             )}
           </Reveal>
         )}
-      </div>
-
-      {/* Horizontal carousel */}
-      <div className="relative z-10 mt-10 sm:mt-14 pb-10">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 mb-3 flex items-center justify-between">
-          <p className="font-anton text-sm tracking-widest text-cream/60">{live ? "PRÓXIMOS PARTIDOS" : "PARTIDOS DE HOY"}</p>
-          <p className="font-mono text-[11px] text-cream/40 animate-pulse">desliza →</p>
-        </div>
-        <div className="flex gap-4 overflow-x-auto scroll-hide px-6 sm:px-10 pb-2 snap-x snap-mandatory">
-          {matches.map((m, i) => (
-            // Outer wrapper owns the staggered entrance (transform animation);
-            // inner card owns the hover lift — kept on separate elements so the
-            // finished entrance animation never freezes the hover transform.
-            <div key={m.id} className="rise-in flex-shrink-0 snap-start" style={{ animationDelay: `${i * 80}ms` }}>
-              <div
-                className={`liquid-glass min-w-[230px] sm:min-w-[260px] h-full px-5 py-5 hover:-translate-y-1.5 ${
-                  m.status === "LIVE" ? "neon-border" : ""
-                }`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-mono text-[10px] tracking-widest text-cream/50 truncate max-w-[70%]">{m.group}</span>
-                  {m.status === "LIVE" ? (
-                    <span className="font-anton text-[10px] tracking-widest text-red flex items-center gap-1 shrink-0">
-                      <span className="pulse-dot" style={{ width: 6, height: 6, background: "#FF4D4D" }} />
-                      LIVE
-                    </span>
-                  ) : (
-                    <KickoffTime time={m.time} className="font-mono text-[10px] tracking-widest text-cream/50 shrink-0" />
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col items-center gap-1 w-1/3">
-                    <TeamBadge flag={m.homeFlag ?? m.homeLogo} />
-                    <span className="font-anton text-[11px] tracking-wide text-center">{m.homeTeam.toUpperCase()}</span>
-                  </div>
-                  <div className="font-anton text-2xl text-center w-1/3 tabular-nums">
-                    {m.status === "LIVE" || m.status === "FINAL" ? (
-                      `${m.homeScore} - ${m.awayScore}`
-                    ) : (
-                      <KickoffTime time={m.time} className="text-cream/40 text-base" />
-                    )}
-                  </div>
-                  <div className="flex flex-col items-center gap-1 w-1/3">
-                    <TeamBadge flag={m.awayFlag ?? m.awayLogo} />
-                    <span className="font-anton text-[11px] tracking-wide text-center">{m.awayTeam.toUpperCase()}</span>
-                  </div>
-                </div>
-                {m.status === "LIVE" && m.minute != null && (
-                  <p className="text-center font-anton text-xs text-neon neon-text mt-3 tabular-nums">{m.minute}&apos;</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </section>
   );

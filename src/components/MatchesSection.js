@@ -118,12 +118,10 @@ export default function MatchesSection() {
       <div className="absolute inset-0 gradient-overlay-dark" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10">
-        <Reveal className="mb-14 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <p className="font-condiment text-2xl sm:text-4xl text-neon/90 mb-1">today&apos;s fixtures</p>
-            <h2 className="font-anton text-5xl sm:text-7xl tracking-tight">PARTIDOS DEL DÍA</h2>
-          </div>
-          <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border self-start sm:self-auto ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
+        <Reveal className="mb-14 flex flex-col items-center text-center gap-3">
+          <p className="font-condiment text-2xl sm:text-4xl text-neon/90">today&apos;s fixtures</p>
+          <h2 className="font-anton text-5xl sm:text-7xl tracking-tight">PARTIDOS DEL DÍA</h2>
+          <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
             {live ? "● DATOS EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
           </span>
         </Reveal>

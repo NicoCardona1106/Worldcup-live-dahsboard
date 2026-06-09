@@ -83,10 +83,10 @@ export default function StandingsSection() {
   return (
     <section id="grupos" className="relative py-28 sm:py-36 bg-bgnavy">
       <div className="max-w-7xl mx-auto px-6 sm:px-10">
-        <Reveal className="mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-          <div>
-            <p className="font-condiment text-2xl sm:text-4xl text-neon/90 mb-1">group standings</p>
-            <div className="flex items-center gap-3 flex-wrap">
+        <Reveal className="mb-10 flex flex-col items-center text-center gap-5">
+          <div className="flex flex-col items-center gap-3">
+            <p className="font-condiment text-2xl sm:text-4xl text-neon/90">group standings</p>
+            <div className="flex items-center gap-3 flex-wrap justify-center">
               <h2 className="font-anton text-5xl sm:text-7xl tracking-tight">CLASIFICACIÓN</h2>
               <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
                 {live ? "● EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
@@ -95,7 +95,7 @@ export default function StandingsSection() {
           </div>
 
           {/* Tab switch */}
-          <div className="liquid-glass !rounded-full p-1 inline-flex self-start sm:self-end">
+          <div className="liquid-glass !rounded-full p-1 inline-flex">
             {[
               { id: "clasificacion", label: "GRUPOS" },
               { id: "goleadores", label: "GOLEADORES" },
@@ -126,7 +126,7 @@ export default function StandingsSection() {
         )}
 
         {/* Tournament statistics */}
-        <div className="mb-5 flex items-center gap-3">
+        <div className="mb-5 flex items-center justify-center gap-3">
           <h3 className="font-anton text-xl tracking-wide text-cream/70">NÚMEROS DEL TORNEO</h3>
           <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${statsLive ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
             {statsLive ? "● EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
