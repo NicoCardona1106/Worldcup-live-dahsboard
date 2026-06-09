@@ -5,6 +5,8 @@ import Reveal from "./Reveal";
 import LiveTicker from "./LiveTicker";
 import TeamBadge from "./TeamBadge";
 import BackgroundVideo from "./BackgroundVideo";
+import Countdown from "./Countdown";
+import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches } from "@/lib/data";
 
@@ -146,18 +148,29 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Kickoff date + time — its own roomy, clearly-labelled block (scheduled only) */}
+            {/* Kickoff date + time + live countdown + calendar/share (scheduled only) */}
             {!featuredIsLive && featured.status !== "FINAL" && featured.time && (
-              <div className="mt-9 flex flex-col items-center gap-3">
-                {featured.dateShort && (
-                  <span className="font-mono text-[11px] sm:text-xs tracking-[0.25em] text-cream/50">📅 {featured.dateShort}</span>
-                )}
-                <div className="inline-flex items-center gap-4 rounded-full border border-cream/15 bg-cream/5 px-7 py-3.5">
-                  <span className="text-lg sm:text-xl">🕐</span>
-                  <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{featured.time}</span>
-                  <span className="w-px h-6 bg-cream/20" />
-                  <span className="font-mono text-[10px] sm:text-xs tracking-[0.25em] text-cream/50">HORA COLOMBIA</span>
+              <div className="mt-9 flex flex-col items-center gap-5">
+                <div className="flex flex-col items-center gap-3">
+                  {featured.dateShort && (
+                    <span className="font-mono text-[11px] sm:text-xs tracking-[0.25em] text-cream/50">📅 {featured.dateShort}</span>
+                  )}
+                  <div className="inline-flex items-center gap-4 rounded-full border border-cream/15 bg-cream/5 px-7 py-3.5">
+                    <span className="text-lg sm:text-xl">🕐</span>
+                    <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{featured.time}</span>
+                    <span className="w-px h-6 bg-cream/20" />
+                    <span className="font-mono text-[10px] sm:text-xs tracking-[0.25em] text-cream/50">HORA COLOMBIA</span>
+                  </div>
                 </div>
+
+                {featured.kickoffISO && (
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="font-mono text-[10px] tracking-[0.3em] text-neon/80">ARRANCA EN</span>
+                    <Countdown iso={featured.kickoffISO} />
+                  </div>
+                )}
+
+                <MatchActions match={featured} className="justify-center" />
               </div>
             )}
 

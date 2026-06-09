@@ -5,6 +5,7 @@ import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
 import KickoffTime from "./KickoffTime";
 import BackgroundVideo from "./BackgroundVideo";
+import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches, matchEvents, isColombia } from "@/lib/data";
 
@@ -90,12 +91,15 @@ function MatchCard({ m, expanded, onToggle, delay = 0 }) {
         </div>
       )}
 
-      <button
-        onClick={() => onToggle(m.id)}
-        className="mt-auto self-start font-anton text-xs tracking-widest text-bgnavy bg-neon px-6 py-3 rounded-full shadow-[0_0_18px_rgba(111,255,0,0.45)] hover:shadow-[0_0_30px_rgba(111,255,0,0.7)] hover:scale-105 transition-all"
-      >
-        {expanded ? "OCULTAR DETALLES ✕" : "VER PARTIDO →"}
-      </button>
+      <div className="mt-auto flex flex-col gap-4 items-start">
+        {!live && !finished && <MatchActions match={m} />}
+        <button
+          onClick={() => onToggle(m.id)}
+          className="self-start font-anton text-xs tracking-widest text-bgnavy bg-neon px-6 py-3 rounded-full shadow-[0_0_18px_rgba(111,255,0,0.45)] hover:shadow-[0_0_30px_rgba(111,255,0,0.7)] hover:scale-105 transition-all"
+        >
+          {expanded ? "OCULTAR DETALLES ✕" : "VER PARTIDO →"}
+        </button>
+      </div>
 
       {expanded && (
         <div className="mt-6 pt-6 border-t border-cream/10 animate-[fadeIn_0.4s_ease]">
