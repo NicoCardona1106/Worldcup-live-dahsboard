@@ -29,27 +29,49 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Scroll-spy: highlight the link whose section is crossing the viewport's
-  // middle band. A visibility map keyed by id keeps the choice deterministic
-  // (first link in order that's currently in the band wins).
-  const visible = useRef({});
+  // Scroll-spy driven by scroll position (not a narrow IntersectionObserver
+  // band). It always resolves to exactly one active link — the last section
+  // whose top has passed under the navbar — so the green indicator never
+  // disappears in gaps and never flickers between nested sections
+  // (#partidos lives inside #en-vivo, #estadisticas inside #grupos).
+  const lockUntil = useRef(0);
   useEffect(() => {
     const ids = links.map((l) => l.href.slice(1));
     const els = ids.map((id) => document.getElementById(id)).filter(Boolean);
     if (els.length === 0) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((e) => {
-          visible.current[e.target.id] = e.isIntersecting;
-        });
-        const current = ids.find((id) => visible.current[id]);
-        if (current) setActive("#" + current);
-      },
-      { rootMargin: "-45% 0px -50% 0px", threshold: 0 }
-    );
-    els.forEach((el) => io.observe(el));
-    return () => io.disconnect();
+
+    const NAV_OFFSET = 110; // navbar height + breathing room
+    const sync = () => {
+      if (Date.now() < lockUntil.current) return; // hold selection after a click
+      const y = window.scrollY + NAV_OFFSET;
+      let current = els[0].id;
+      for (const el of els) {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        if (top <= y) current = el.id;
+      }
+      // At the very bottom, force the last link active — short trailing
+      // sections whose top never reaches the offset would otherwise stay unlit.
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        current = els[els.length - 1].id;
+      }
+      setActive("#" + current);
+    };
+
+    sync();
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+    };
   }, []);
+
+  // Light the indicator immediately on click and lock out the scroll handler
+  // briefly so the smooth-scroll animation can't flicker the selection.
+  const handleNavClick = (href) => {
+    setActive(href);
+    lockUntil.current = Date.now() + 800;
+  };
 
   return (
     <>
@@ -78,6 +100,7 @@ export default function Navbar() {
                 <li key={l.href}>
                   <a
                     href={l.href}
+                    onClick={() => handleNavClick(l.href)}
                     className={`relative transition-colors ${isActive ? "text-neon" : "hover:text-neon"}`}
                   >
                     {l.label}
@@ -114,7 +137,10 @@ export default function Navbar() {
                 <li key={l.href}>
                   <a
                     href={l.href}
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      handleNavClick(l.href);
+                      setOpen(false);
+                    }}
                     className={`transition-colors ${active === l.href ? "text-neon" : "hover:text-neon"}`}
                   >
                     {l.label}
