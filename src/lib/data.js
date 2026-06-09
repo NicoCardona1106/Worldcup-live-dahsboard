@@ -1,6 +1,14 @@
 // Placeholder data — shaped to match what a live-scores API (e.g. API-FOOTBALL,
 // football-data.org) typically returns, so swapping in real fetches is a drop-in.
 
+// This dashboard is built for Colombia, so the Selección gets a visual accent
+// wherever it appears. ESPN may label it "Colombia" or the short code "COL".
+export function isColombia(name) {
+  if (!name) return false;
+  const n = String(name).trim().toLowerCase();
+  return n.includes("colombia") || n === "col";
+}
+
 export const matches = [
   {
     id: 1,
@@ -13,6 +21,7 @@ export const matches = [
     minute: null,
     status: "SCHEDULED",
     time: "14:00",
+    dateShort: "SÁB 13 JUN",
     group: "GRUPO B",
     stats: { possession: [50, 50], shots: [0, 0], corners: [0, 0] },
   },
@@ -27,6 +36,7 @@ export const matches = [
     minute: null,
     status: "SCHEDULED",
     time: "17:00",
+    dateShort: "SÁB 13 JUN",
     group: "GRUPO D",
     stats: { possession: [50, 50], shots: [0, 0], corners: [0, 0] },
   },
@@ -41,6 +51,7 @@ export const matches = [
     minute: null,
     status: "SCHEDULED",
     time: "20:00",
+    dateShort: "SÁB 13 JUN",
     group: "GRUPO C",
     stats: { possession: [50, 50], shots: [0, 0], corners: [0, 0] },
   },

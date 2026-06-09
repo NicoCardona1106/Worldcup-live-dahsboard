@@ -51,6 +51,18 @@ function kickoffDate(dateIso) {
   }
 }
 
+// Compact Colombia-time day label for cards, e.g. "SÁB 14 JUN".
+function kickoffDayShort(dateIso) {
+  try {
+    return new Date(dateIso)
+      .toLocaleDateString("es-CO", { weekday: "short", day: "2-digit", month: "short", timeZone: "America/Bogota" })
+      .replace(/[.,]/g, "")
+      .toUpperCase();
+  } catch {
+    return "";
+  }
+}
+
 /** Maps one ESPN scoreboard `event` into the shape our UI expects. */
 export function transformMatch(event) {
   const competition = event?.competitions?.[0];
@@ -78,6 +90,7 @@ export function transformMatch(event) {
     // several different days, so anything consuming `time` (which is just the
     // clock) needs this to know *which* day a match is actually on.
     date: kickoffDate(event.date),
+    dateShort: kickoffDayShort(event.date),
     kickoffISO: event.date || null,
     group: stageLabel(event?.season?.slug),
     venue: competition?.venue?.fullName || null,

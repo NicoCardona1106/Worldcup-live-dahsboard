@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import Reveal from "./Reveal";
 import LiveTicker from "./LiveTicker";
 import TeamBadge from "./TeamBadge";
+import BackgroundVideo from "./BackgroundVideo";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches } from "@/lib/data";
 
@@ -68,16 +69,11 @@ export default function Hero() {
 
   return (
     <section id="hero" className="relative min-h-screen flex flex-col justify-center overflow-hidden">
-      <video
+      <BackgroundVideo
         ref={videoRef}
-        autoPlay
-        muted
-        loop
-        playsInline
+        src="https://cdn.coverr.co/videos/coverr-soccer-stadium-from-above-2632/1080p.mp4"
         className="absolute inset-0 w-full h-full object-cover will-change-transform"
-      >
-        <source src="https://cdn.coverr.co/videos/coverr-soccer-stadium-from-above-2632/1080p.mp4" type="video/mp4" />
-      </video>
+      />
       <div className="absolute inset-0 gradient-overlay-dark" />
 
       {/* Floating decorative orbs */}
@@ -150,9 +146,12 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Kickoff time — its own roomy, clearly-labelled block (scheduled only) */}
+            {/* Kickoff date + time — its own roomy, clearly-labelled block (scheduled only) */}
             {!featuredIsLive && featured.status !== "FINAL" && featured.time && (
-              <div className="mt-9 flex justify-center">
+              <div className="mt-9 flex flex-col items-center gap-3">
+                {featured.dateShort && (
+                  <span className="font-mono text-[11px] sm:text-xs tracking-[0.25em] text-cream/50">📅 {featured.dateShort}</span>
+                )}
                 <div className="inline-flex items-center gap-4 rounded-full border border-cream/15 bg-cream/5 px-7 py-3.5">
                   <span className="text-lg sm:text-xl">🕐</span>
                   <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{featured.time}</span>

@@ -1,13 +1,15 @@
 "use client";
 
 import Reveal from "./Reveal";
+import BackgroundVideo from "./BackgroundVideo";
 
 export default function CTASection() {
   return (
     <section className="relative py-32 sm:py-44 overflow-hidden">
-      <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
-        <source src="https://cdn.coverr.co/videos/coverr-fans-cheering-at-a-football-match-7659/1080p.mp4" type="video/mp4" />
-      </video>
+      <BackgroundVideo
+        src="https://cdn.coverr.co/videos/coverr-fans-cheering-at-a-football-match-7659/1080p.mp4"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
       <div className="absolute inset-0 gradient-overlay-dark" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-6 sm:px-10 text-center">

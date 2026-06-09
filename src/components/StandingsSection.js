@@ -5,7 +5,7 @@ import Reveal from "./Reveal";
 import Counter from "./Counter";
 import TeamBadge from "./TeamBadge";
 import { useLiveStandings, useLiveTournamentStats, useLiveTopScorers } from "@/hooks/useLiveData";
-import { groups as placeholderGroups, tournamentStats, topScorers } from "@/lib/data";
+import { groups as placeholderGroups, tournamentStats, topScorers, isColombia } from "@/lib/data";
 
 function GroupTable({ name, teams, delay = 0 }) {
   return (
@@ -23,21 +23,30 @@ function GroupTable({ name, teams, delay = 0 }) {
           </tr>
         </thead>
         <tbody>
-          {teams.map((t) => (
-            <tr key={t.team} className={`border-b border-cream/5 transition-colors hover:bg-cream/5 ${t.top ? "text-neon" : "text-cream/80"}`}>
-              <td className="py-2.5">
-                <span className="inline-flex items-center gap-2">
-                  <TeamBadge flag={t.flag} size="text-base" />
-                  <span className="font-anton text-[11px] sm:text-xs tracking-wide">{t.team.toUpperCase()}</span>
-                </span>
-              </td>
-              <td className="text-center py-2.5">{t.pj}</td>
-              <td className="text-center py-2.5">{t.g}</td>
-              <td className="text-center py-2.5">{t.e}</td>
-              <td className="text-center py-2.5">{t.p}</td>
-              <td className={`text-center py-2.5 font-anton ${t.top ? "text-neon" : "text-cream"}`}>{t.pts}</td>
-            </tr>
-          ))}
+          {teams.map((t) => {
+            const col = isColombia(t.team);
+            return (
+              <tr
+                key={t.team}
+                className={`border-b border-cream/5 transition-colors hover:bg-cream/5 ${
+                  col ? "bg-gold/10 text-gold" : t.top ? "text-neon" : "text-cream/80"
+                }`}
+              >
+                <td className="py-2.5">
+                  <span className="inline-flex items-center gap-2">
+                    {col && <span className="text-gold">★</span>}
+                    <TeamBadge flag={t.flag} size="text-base" />
+                    <span className="font-anton text-[11px] sm:text-xs tracking-wide">{t.team.toUpperCase()}</span>
+                  </span>
+                </td>
+                <td className="text-center py-2.5">{t.pj}</td>
+                <td className="text-center py-2.5">{t.g}</td>
+                <td className="text-center py-2.5">{t.e}</td>
+                <td className="text-center py-2.5">{t.p}</td>
+                <td className={`text-center py-2.5 font-anton ${col ? "text-gold" : t.top ? "text-neon" : "text-cream"}`}>{t.pts}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </Reveal>

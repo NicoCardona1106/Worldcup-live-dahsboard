@@ -2,6 +2,7 @@
 
 import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
+import BackgroundVideo from "./BackgroundVideo";
 import { useLiveBracket } from "@/hooks/useLiveData";
 
 // Placeholder bracket shape — empty slots (no invented teams/scores). The
@@ -56,9 +57,10 @@ export default function BracketSection() {
 
   return (
     <section className="relative py-28 sm:py-36 overflow-hidden">
-      <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-25">
-        <source src="https://cdn.coverr.co/videos/coverr-confetti-falling-on-a-stadium-crowd-2208/1080p.mp4" type="video/mp4" />
-      </video>
+      <BackgroundVideo
+        src="https://cdn.coverr.co/videos/coverr-confetti-falling-on-a-stadium-crowd-2208/1080p.mp4"
+        className="absolute inset-0 w-full h-full object-cover opacity-25"
+      />
       <div className="absolute inset-0 gradient-overlay-dark" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10">

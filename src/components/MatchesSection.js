@@ -4,8 +4,9 @@ import { useState } from "react";
 import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
 import KickoffTime from "./KickoffTime";
+import BackgroundVideo from "./BackgroundVideo";
 import { useLiveMatches } from "@/hooks/useLiveData";
-import { matches as placeholderMatches, matchEvents } from "@/lib/data";
+import { matches as placeholderMatches, matchEvents, isColombia } from "@/lib/data";
 
 const eventIcon = { goal: "⚽", yellow: "🟨", sub: "🔁" };
 
@@ -28,12 +29,23 @@ function StatBar({ label, left, right, color, pct }) {
 function MatchCard({ m, expanded, onToggle, delay = 0 }) {
   const live = m.status === "LIVE";
   const finished = m.status === "FINAL";
+  const colombia = isColombia(m.homeTeam) || isColombia(m.awayTeam);
   const hasStats = Boolean(m.stats);
   const shotsPct = hasStats && m.stats.shots[0] + m.stats.shots[1] ? Math.round((m.stats.shots[0] / (m.stats.shots[0] + m.stats.shots[1])) * 100) : 50;
   const cornersPct = hasStats && m.stats.corners[0] + m.stats.corners[1] ? Math.round((m.stats.corners[0] / (m.stats.corners[0] + m.stats.corners[1])) * 100) : 50;
 
   return (
-    <Reveal delay={delay} className={`liquid-glass px-6 py-7 flex flex-col ${live ? "neon-border" : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"}`}>
+    <Reveal
+      delay={delay}
+      className={`liquid-glass px-6 py-7 flex flex-col ${
+        live ? "neon-border" : colombia ? "!border-gold/40 shadow-[0_0_22px_rgba(255,215,0,0.15)]" : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"
+      }`}
+    >
+      {colombia && (
+        <span className="self-start mb-3 inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-[9px] tracking-widest text-gold">
+          🇨🇴 TU SELECCIÓN
+        </span>
+      )}
       <div className="flex items-center justify-between mb-5 gap-2">
         <span className="font-anton text-[11px] tracking-[0.2em] text-cream/50 truncate">{m.group}</span>
         {live ? (
@@ -42,7 +54,12 @@ function MatchCard({ m, expanded, onToggle, delay = 0 }) {
             EN VIVO
           </span>
         ) : (
-          <KickoffTime time={finished ? "FINAL" : m.time} className="font-mono text-[11px] tracking-widest text-cream/50 shrink-0" />
+          <div className="flex flex-col items-end gap-0.5 shrink-0">
+            {!finished && m.dateShort && (
+              <span className="font-mono text-[9px] tracking-widest text-cream/40">{m.dateShort}</span>
+            )}
+            <KickoffTime time={finished ? "FINAL" : m.time} className="font-mono text-[11px] tracking-widest text-cream/50" />
+          </div>
         )}
       </div>
 
@@ -112,9 +129,10 @@ export default function MatchesSection() {
 
   return (
     <section id="en-vivo" className="relative py-28 sm:py-36 overflow-hidden">
-      <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-30">
-        <source src="https://cdn.coverr.co/videos/coverr-a-soccer-player-kicks-the-ball-9537/1080p.mp4" type="video/mp4" />
-      </video>
+      <BackgroundVideo
+        src="https://cdn.coverr.co/videos/coverr-a-soccer-player-kicks-the-ball-9537/1080p.mp4"
+        className="absolute inset-0 w-full h-full object-cover opacity-30"
+      />
       <div className="absolute inset-0 gradient-overlay-dark" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10">
