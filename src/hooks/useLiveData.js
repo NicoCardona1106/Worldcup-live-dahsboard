@@ -1,24 +1,36 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Polls a same-origin JSON endpoint and exposes its data, falling back to
  * `placeholder` until the first successful response (and again if every
  * request fails) so the UI always has something sensible to render — useful
- * here since the 2026 World Cup hasn't kicked off yet and ESPN may return an
- * empty fixture list outside matchdays.
+ * here since ESPN may return an empty fixture list outside matchdays.
  *
  * `pick` extracts the relevant slice from the JSON body and should return
  * `null`/`undefined`/an empty array|object when there's nothing usable yet.
+ *
+ * Liveness:
+ * - `fastWhen(picked)` + `fastMs`: when the predicate matches (e.g. a match
+ *   is in play), polling tightens from `intervalMs` to `fastMs`, so live
+ *   scores update in seconds instead of high tens of seconds.
+ * - The page refetches immediately when the tab becomes visible again —
+ *   browsers throttle/suspend timers in background tabs, which otherwise
+ *   leaves a stale score on screen exactly when someone switches back to
+ *   check it (the "I had to reload to see the goal" effect).
  */
-function useLiveData(url, pick, placeholder, intervalMs) {
+function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = {}) {
   const [data, setData] = useState(placeholder);
   const [live, setLive] = useState(false);
-  const mounted = useRef(true);
 
   useEffect(() => {
-    mounted.current = true;
+    let stopped = false;
+    let timer = null;
+    let delay = intervalMs;
+    // Generation counter: visibility-triggered restarts bump it so any older
+    // in-flight cycle exits instead of double-scheduling a second loop.
+    let gen = 0;
 
     async function load() {
       try {
@@ -26,29 +38,51 @@ function useLiveData(url, pick, placeholder, intervalMs) {
         const body = await res.json();
         const picked = pick(body);
         const hasData = Array.isArray(picked) ? picked.length > 0 : picked && Object.keys(picked).length > 0;
-        if (!mounted.current) return;
+        if (stopped) return;
         if (hasData) {
           setData(picked);
           setLive(true);
+          delay = fastMs && fastWhen?.(picked) ? fastMs : intervalMs;
         }
       } catch {
         // Network hiccup — keep showing whatever we already had (live or placeholder).
       }
     }
 
-    load();
-    const id = setInterval(load, intervalMs);
+    async function cycle(myGen) {
+      await load();
+      if (stopped || myGen !== gen) return;
+      timer = setTimeout(() => cycle(myGen), delay);
+    }
+
+    cycle(gen);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || stopped) return;
+      gen += 1;
+      clearTimeout(timer);
+      cycle(gen);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
-      mounted.current = false;
-      clearInterval(id);
+      stopped = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [url, intervalMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, live };
 }
 
-export function useLiveMatches(placeholder, { pollMs = 45_000 } = {}) {
-  return useLiveData("/api/scoreboard", (body) => body?.matches, placeholder, pollMs);
+// Matches poll fast (12s) while anything is in play, easing back to 45s when
+// nothing is live — combined with the 10s server-side revalidate, a goal
+// shows up on screen within ~20s without anyone touching the page.
+export function useLiveMatches(placeholder, { pollMs = 45_000, livePollMs = 12_000 } = {}) {
+  return useLiveData("/api/scoreboard", (body) => body?.matches, placeholder, pollMs, {
+    fastMs: livePollMs,
+    fastWhen: (matches) => matches.some((m) => m.status === "LIVE"),
+  });
 }
 
 export function useLiveStandings(placeholder, { pollMs = 5 * 60_000 } = {}) {

@@ -195,7 +195,7 @@ function transformKeyEvent(ev) {
  */
 export async function fetchMatchEvents(eventId, { live = false } = {}) {
   try {
-    const res = await fetch(`${SUMMARY_URL}?event=${eventId}`, { next: { revalidate: live ? 30 : 600 } });
+    const res = await fetch(`${SUMMARY_URL}?event=${eventId}`, { next: { revalidate: live ? 15 : 600 } });
     if (!res.ok) return [];
     const data = await res.json();
     return (data?.keyEvents || [])
@@ -224,8 +224,11 @@ function dateParam(ms) {
  */
 export async function fetchScoreboard() {
   const now = Date.now();
+  // 10s server-side cache: short enough that, paired with the client's 12s
+  // live polling, a goal reaches the screen in ~20s worst case — long enough
+  // that many concurrent visitors still share one upstream request.
   const res = await fetch(`${SCOREBOARD_URL}?dates=${dateParam(now - DAY_MS)}-${dateParam(now + 7 * DAY_MS)}&limit=100`, {
-    next: { revalidate: 30 },
+    next: { revalidate: 10 },
   });
   if (!res.ok) throw new Error(`ESPN scoreboard ${res.status}`);
   const data = await res.json();
