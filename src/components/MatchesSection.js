@@ -9,7 +9,7 @@ import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches, matchEvents, isColombia } from "@/lib/data";
 
-const eventIcon = { goal: "⚽", yellow: "🟨", sub: "🔁" };
+const eventIcon = { goal: "⚽", yellow: "🟨", red: "🟥", sub: "🔁" };
 
 function StatBar({ label, left, right, color, pct }) {
   return (
@@ -27,13 +27,20 @@ function StatBar({ label, left, right, color, pct }) {
   );
 }
 
-function MatchCard({ m, expanded, onToggle, delay = 0 }) {
+// Share-of-total bar % for a [home, away] stat pair (50/50 when nothing yet).
+function pairPct(pair) {
+  const total = pair[0] + pair[1];
+  return total ? Math.round((pair[0] / total) * 100) : 50;
+}
+
+function MatchCard({ m, usingSample, expanded, onToggle, delay = 0 }) {
   const live = m.status === "LIVE";
   const finished = m.status === "FINAL";
   const colombia = isColombia(m.homeTeam) || isColombia(m.awayTeam);
-  const hasStats = Boolean(m.stats);
-  const shotsPct = hasStats && m.stats.shots[0] + m.stats.shots[1] ? Math.round((m.stats.shots[0] / (m.stats.shots[0] + m.stats.shots[1])) * 100) : 50;
-  const cornersPct = hasStats && m.stats.corners[0] + m.stats.corners[1] ? Math.round((m.stats.corners[0] / (m.stats.corners[0] + m.stats.corners[1])) * 100) : 50;
+  // Each stat pair can be null independently (provider may omit some), so the
+  // rows render one by one instead of assuming the whole object is complete.
+  const stats = (live || finished) && m.stats ? m.stats : null;
+  const events = m.events?.length ? m.events : null;
 
   return (
     <Reveal
@@ -83,11 +90,12 @@ function MatchCard({ m, expanded, onToggle, delay = 0 }) {
       {live && m.minute != null && <p className="font-anton text-xs text-neon neon-text mb-5">MINUTO {m.minute}&apos;</p>}
       {!live && !finished && m.venue && <p className="font-mono text-[11px] text-cream/40 mb-5 truncate">📍 {m.venue}</p>}
 
-      {hasStats && (
+      {stats && (
         <div className="space-y-3 mb-6">
-          <StatBar label="POSESIÓN" left={`${m.stats.possession[0]}%`} right={`${m.stats.possession[1]}%`} color="bg-neon" pct={m.stats.possession[0]} />
-          <StatBar label="REMATES" left={m.stats.shots[0]} right={m.stats.shots[1]} color="bg-blue" pct={shotsPct} />
-          <StatBar label="CÓRNERS" left={m.stats.corners[0]} right={m.stats.corners[1]} color="bg-gold" pct={cornersPct} />
+          {stats.possession && <StatBar label="POSESIÓN" left={`${stats.possession[0]}%`} right={`${stats.possession[1]}%`} color="bg-neon" pct={stats.possession[0]} />}
+          {stats.shots && <StatBar label="REMATES" left={stats.shots[0]} right={stats.shots[1]} color="bg-blue" pct={pairPct(stats.shots)} />}
+          {stats.shotsOnTarget && <StatBar label="TIROS AL ARCO" left={stats.shotsOnTarget[0]} right={stats.shotsOnTarget[1]} color="bg-red" pct={pairPct(stats.shotsOnTarget)} />}
+          {stats.corners && <StatBar label="CÓRNERS" left={stats.corners[0]} right={stats.corners[1]} color="bg-gold" pct={pairPct(stats.corners)} />}
         </div>
       )}
 
@@ -104,7 +112,20 @@ function MatchCard({ m, expanded, onToggle, delay = 0 }) {
       {expanded && (
         <div className="mt-6 pt-6 border-t border-cream/10 animate-[fadeIn_0.4s_ease]">
           <p className="font-anton text-[11px] tracking-[0.2em] text-cream/50 mb-4">CRONOLOGÍA DEL PARTIDO</p>
-          {hasStats ? (
+          {events ? (
+            // Real timeline from the provider — goals, cards and subs with
+            // minute and team, for live (auto-refreshing) and finished matches.
+            <ul className="space-y-3">
+              {events.map((ev, i) => (
+                <li key={i} className="flex items-start gap-3 font-mono text-xs text-cream/70">
+                  <span className="font-anton text-neon w-11 shrink-0 tabular-nums">{ev.minute}</span>
+                  <span className="shrink-0">{eventIcon[ev.type] || "•"}</span>
+                  <span>{ev.text}</span>
+                </li>
+              ))}
+            </ul>
+          ) : usingSample && m.stats ? (
+            // Demo timeline — only ever shown alongside the sample fixtures.
             <ul className="space-y-3">
               {matchEvents.map((ev, i) => (
                 <li key={i} className="flex items-start gap-3 font-mono text-xs text-cream/70">
@@ -118,7 +139,9 @@ function MatchCard({ m, expanded, onToggle, delay = 0 }) {
             </ul>
           ) : (
             <p className="font-mono text-xs text-cream/50 leading-relaxed">
-              {m.statusDetail || "La cronología minuto a minuto estará disponible cuando el partido esté en vivo."}
+              {live || finished
+                ? "Aún no hay incidencias registradas para este partido."
+                : m.statusDetail || "La cronología minuto a minuto estará disponible cuando el partido esté en vivo."}
             </p>
           )}
         </div>
@@ -150,7 +173,7 @@ export default function MatchesSection() {
 
         <div id="partidos" className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {matches.map((m, i) => (
-            <MatchCard key={m.id} m={m} delay={i * 90} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
+            <MatchCard key={m.id} m={m} usingSample={!live} delay={i * 90} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
           ))}
         </div>
       </div>

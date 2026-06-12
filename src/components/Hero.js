@@ -10,40 +10,52 @@ import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
 import { matches as placeholderMatches } from "@/lib/data";
 
-const FALLBACK_STATS = [
-  { label: "POSESIÓN", value: "58%", color: "bg-neon", barPct: 58 },
-  { label: "REMATES", value: 14, color: "bg-blue", barPct: 70 },
-  { label: "CÓRNERS", value: 7, color: "bg-gold", barPct: 45 },
-  { label: "XG", value: 2.31, color: "bg-red", barPct: 63 },
-];
-
-// `match.stats` (placeholder data and ESPN's per-match `situation` endpoint)
-// comes shaped as { possession: [a,b], shots: [a,b], corners: [a,b] } — turn
-// it into the { label, value, color, barPct } bars the scoreboard renders.
+// `match.stats` comes from ESPN's scoreboard (`competitors[].statistics`),
+// shaped as { possession: [h,a], shots: [h,a], shotsOnTarget: [h,a],
+// corners: [h,a] } where any pair can be null if the provider didn't send it —
+// each bar is built only from data that's actually present, never invented.
 function statsToBars(stats) {
   if (!stats) return null;
-  const shotsTotal = stats.shots[0] + stats.shots[1];
-  const cornersTotal = stats.corners[0] + stats.corners[1];
-  return [
-    { label: "POSESIÓN", value: `${stats.possession[0]}%`, color: "bg-neon", barPct: stats.possession[0] },
-    { label: "REMATES", value: `${stats.shots[0]} - ${stats.shots[1]}`, color: "bg-blue", barPct: shotsTotal ? Math.round((stats.shots[0] / shotsTotal) * 100) : 50 },
-    { label: "CÓRNERS", value: `${stats.corners[0]} - ${stats.corners[1]}`, color: "bg-gold", barPct: cornersTotal ? Math.round((stats.corners[0] / cornersTotal) * 100) : 50 },
-  ];
+  const ratio = (pair) => {
+    const total = pair[0] + pair[1];
+    return total ? Math.round((pair[0] / total) * 100) : 50;
+  };
+  const bars = [];
+  if (stats.possession) bars.push({ label: "POSESIÓN", value: `${stats.possession[0]}% - ${stats.possession[1]}%`, color: "bg-neon", barPct: stats.possession[0] });
+  if (stats.shots) bars.push({ label: "REMATES", value: `${stats.shots[0]} - ${stats.shots[1]}`, color: "bg-blue", barPct: ratio(stats.shots) });
+  if (stats.shotsOnTarget) bars.push({ label: "AL ARCO", value: `${stats.shotsOnTarget[0]} - ${stats.shotsOnTarget[1]}`, color: "bg-red", barPct: ratio(stats.shotsOnTarget) });
+  if (stats.corners) bars.push({ label: "CÓRNERS", value: `${stats.corners[0]} - ${stats.corners[1]}`, color: "bg-gold", barPct: ratio(stats.corners) });
+  return bars.length ? bars : null;
 }
 
 export default function Hero() {
   const videoRef = useRef(null);
   const { data: matches, live } = useLiveMatches(placeholderMatches);
 
-  // Pick the live match if there is one, otherwise the soonest scheduled fixture.
+  // Featured match priority: a live one > the soonest *upcoming* scheduled
+  // fixture > the most recent final. Crucially, a finished match never blocks
+  // the countdown — the moment a game ends, the hero rolls to the next kickoff
+  // on its own (the scoreboard poll keeps `matches` fresh, no reload needed).
   const featured = useMemo(() => {
-    return matches.find((m) => m.status === "LIVE") || matches[0] || null;
+    const liveMatch = matches.find((m) => m.status === "LIVE");
+    if (liveMatch) return liveMatch;
+
+    // The scoreboard API already filters SCHEDULED fixtures to future kickoffs,
+    // so the soonest one by kickoff time is the next match.
+    const upcoming = matches
+      .filter((m) => m.status === "SCHEDULED")
+      .sort((a, b) => new Date(a.kickoffISO || 0) - new Date(b.kickoffISO || 0));
+    if (upcoming[0]) return upcoming[0];
+
+    const finals = matches.filter((m) => m.status === "FINAL");
+    return finals[finals.length - 1] || matches[0] || null;
   }, [matches]);
 
   const featuredIsLive = featured?.status === "LIVE";
-  // Real-time match stats (possession/shots/etc.) require ESPN's per-match
-  // `situation` endpoint — see README for how to extend /api/scoreboard with it.
-  const stats = statsToBars(featured?.stats) || (featuredIsLive ? FALLBACK_STATS : null);
+  const featuredIsFinal = featured?.status === "FINAL";
+  // Stat bars only make sense once the match has been played — and only from
+  // real provider data (no invented fallback numbers).
+  const stats = featuredIsLive || featuredIsFinal ? statsToBars(featured?.stats) : null;
 
   // Parallax on the background video — throttled to one update per animation
   // frame (and GPU-composited via translate3d) so scrolling stays smooth, and
@@ -105,7 +117,9 @@ export default function Hero() {
                   <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-neon">EN VIVO</span>
                 </span>
               ) : (
-                <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-cream/50">PRÓXIMO PARTIDO</span>
+                <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-cream/50">
+                  {featuredIsFinal ? "FINALIZADO" : "PRÓXIMO PARTIDO"}
+                </span>
               )}
               <span className="font-mono text-[11px] sm:text-xs text-cream/60 px-4 py-1.5 rounded-full border border-cream/15">
                 {featured.group}

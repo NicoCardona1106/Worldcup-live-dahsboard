@@ -72,6 +72,15 @@ section[id],
     background: linear-gradient(120deg, rgba(111, 255, 0, 0.06), transparent 40%, rgba(59, 164, 255, 0.06));
     pointer-events: none;
   }
+
+  /* Opaque variant for floating overlays (chat panel, mobile menu). The
+     translucent glass relies on backdrop-filter, which several mobile
+     browsers skip or break over video/blend-mode layers — leaving the panel
+     see-through and the text unreadable. Declared after .liquid-glass so it
+     wins the cascade at equal specificity. */
+  .glass-solid {
+    background: linear-gradient(160deg, rgba(10, 20, 64, 0.97), rgba(2, 8, 36, 0.985));
+  }
 }
 
 /* ===== Live pulse ===== */

@@ -161,19 +161,23 @@ export default function AIAssistant() {
 
   return (
     <>
-      {/* Floating launcher button */}
+      {/* Floating launcher button — above the grain overlay (z-40), navbar
+          (z-50) and ticker, so it never sinks under page chrome on mobile. */}
       <button
         onClick={() => setOpen((v) => !v)}
-        aria-label="Abrir Lucho, el asistente de IA"
-        className="fixed bottom-6 right-6 z-[60] w-16 h-16 rounded-full liquid-glass ai-orb flex items-center justify-center text-2xl hover:scale-110 transition-transform"
+        aria-label={open ? "Cerrar el asistente de IA" : "Abrir Lucho, el asistente de IA"}
+        className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 z-[80] w-14 h-14 sm:w-16 sm:h-16 rounded-full liquid-glass glass-solid ai-orb flex items-center justify-center text-2xl hover:scale-110 transition-transform"
       >
         {open ? "✕" : "🤖"}
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — full-width sheet on phones (anchored above the
+          launcher, capped by dynamic viewport height so the keyboard/URL bar
+          can't push it off screen), floating card on ≥sm. Opaque background:
+          translucent glass over the page made the chat unreadable on mobile. */}
       {open && (
-        <div className="fixed bottom-28 right-6 z-[60] w-[92vw] max-w-sm liquid-glass flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(1,8,40,0.7)]">
-          <div className="px-5 py-4 border-b border-cream/10 flex items-center justify-between">
+        <div className="fixed bottom-[5.5rem] sm:bottom-28 inset-x-3 sm:inset-x-auto sm:right-6 z-[80] sm:w-96 sm:max-w-[calc(100vw-3rem)] max-h-[min(34rem,calc(100dvh-7rem))] liquid-glass glass-solid flex flex-col overflow-hidden shadow-[0_20px_60px_rgba(1,8,40,0.85)]">
+          <div className="px-5 py-4 border-b border-cream/10 flex items-center justify-between shrink-0">
             <div>
               <p className="font-anton text-sm tracking-widest text-neon">LUCHO</p>
               <p className="font-mono text-[10px] text-cream/50 mt-0.5">Asistente de WORLD CUP LIVE · Mundial 2026</p>
@@ -189,7 +193,7 @@ export default function AIAssistant() {
             </button>
           </div>
 
-          <div ref={scrollRef} className="flex-1 max-h-[50vh] overflow-y-auto px-5 py-4 space-y-3 scroll-hide">
+          <div ref={scrollRef} className="flex-1 min-h-0 max-h-[50dvh] overflow-y-auto px-5 py-4 space-y-3 scroll-hide">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div
@@ -213,7 +217,7 @@ export default function AIAssistant() {
           </div>
 
           {messages.length < 3 && (
-            <div className="px-5 pb-3 flex flex-wrap gap-2">
+            <div className="px-5 pb-3 flex flex-wrap gap-2 shrink-0">
               {SUGGESTIONS.map((s) => (
                 <button
                   key={s}
@@ -231,7 +235,7 @@ export default function AIAssistant() {
               e.preventDefault();
               sendMessage();
             }}
-            className="px-4 py-3 border-t border-cream/10 flex items-center gap-2"
+            className="px-4 py-3 border-t border-cream/10 flex items-center gap-2 shrink-0"
           >
             {speechSupported && (
               <button

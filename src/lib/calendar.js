@@ -66,7 +66,10 @@ export function icsDataUri(match) {
     "PRODID:-//WORLD CUP LIVE//Mundial 2026//ES",
     "BEGIN:VEVENT",
     `UID:${uid}`,
-    `DTSTAMP:${toICSDate(new Date())}`,
+    // Deterministic stamp (kickoff, not "now"): this URI is computed during
+    // render, and a wall-clock DTSTAMP made the server and client HTML differ
+    // → React hydration mismatch on every match card.
+    `DTSTAMP:${toICSDate(t.start)}`,
     `DTSTART:${toICSDate(t.start)}`,
     `DTEND:${toICSDate(t.end)}`,
     `SUMMARY:${escapeICS(matchTitle(match))}`,

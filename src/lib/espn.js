@@ -25,7 +25,9 @@ function stageLabel(slug) {
 function statusFromState(statusType, displayClock) {
   switch (statusType?.state) {
     case "in":
-      return { status: "LIVE", minute: (displayClock || "").replace("'", "").trim() || null };
+      // Clocks like "45'+3'" carry several apostrophes — strip them all, the UI
+      // re-appends a single trailing one.
+      return { status: "LIVE", minute: (displayClock || "").replace(/'/g, "").trim() || null };
     case "post":
       return { status: "FINAL", minute: null };
     default:
@@ -63,6 +65,34 @@ function kickoffDayShort(dateIso) {
   }
 }
 
+// One numeric stat from a competitor's `statistics` array, or null if ESPN
+// didn't send it (or sent something non-numeric).
+function statNumber(competitor, name) {
+  const raw = competitor?.statistics?.find((s) => s.name === name)?.displayValue;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+// The scoreboard *does* ship per-team live stats (possession, shots, shots on
+// target, corners) inside `competitors[].statistics`. Each pair is keyed off
+// the competitor's `homeAway` flag — never array position — so home/away can't
+// get swapped. A pair is dropped (null) unless both sides report a number.
+function extractStats(home, away) {
+  const pair = (name, round) => {
+    const h = statNumber(home, name);
+    const a = statNumber(away, name);
+    if (h == null || a == null) return null;
+    return round ? [Math.round(h), Math.round(a)] : [h, a];
+  };
+  const stats = {
+    possession: pair("possessionPct", true),
+    shots: pair("totalShots"),
+    shotsOnTarget: pair("shotsOnTarget"),
+    corners: pair("wonCorners"),
+  };
+  return Object.values(stats).some(Boolean) ? stats : null;
+}
+
 /** Maps one ESPN scoreboard `event` into the shape our UI expects. */
 export function transformMatch(event) {
   const competition = event?.competitions?.[0];
@@ -95,19 +125,140 @@ export function transformMatch(event) {
     group: stageLabel(event?.season?.slug),
     venue: competition?.venue?.fullName || null,
     statusDetail: statusType?.shortDetail || statusType?.detail || null,
-    // ESPN's site/v2 scoreboard doesn't expose live possession/shots/corners —
-    // that lives behind the `situation` endpoint per-match (see README for how
-    // to extend this). We return nulls so the UI can hide those rows gracefully.
-    stats: null,
+    // Real per-team stats straight from the scoreboard — only meaningful once
+    // the ball is rolling, so scheduled fixtures stay null (pre-match ESPN
+    // sends all-zero rows which would render as misleading 0–0 bars).
+    stats: live || status === "FINAL" ? extractStats(home, away) : null,
+    events: [],
   };
 }
 
-/** Fetches & transforms today's (or the nearest matchday's) World Cup fixtures. */
+// ===== Match timeline (goals, cards, subs) — from the per-match summary =====
+
+// keyEvents type ids we surface in the timeline. Everything else (kickoff,
+// halftime, drinks breaks, VAR delays…) is noise for a viewer.
+const EVENT_KIND = {
+  70: "goal", // Goal
+  97: "goal", // Penalty - Scored
+  98: "goal", // Penalty - Scored (alt)
+  110: "goal", // Own Goal
+  137: "goal", // Goal - Header
+  138: "goal", // Goal - Free kick
+  93: "red", // Red Card
+  94: "yellow", // Yellow Card
+  76: "sub", // Substitution
+};
+
+function eventName(participant) {
+  return participant?.athlete?.shortName || participant?.athlete?.displayName || null;
+}
+
+// Turns one ESPN keyEvent into { minute, type, team, text } in Spanish.
+function transformKeyEvent(ev) {
+  const typeText = ev?.type?.text || "";
+  const kind = EVENT_KIND[Number(ev?.type?.id)] || (ev?.scoringPlay ? "goal" : null);
+  if (!kind) return null;
+
+  const minute = ev?.clock?.displayValue || "";
+  const team = ev?.team?.displayName || "";
+  const p1 = eventName(ev?.participants?.[0]);
+  const p2 = eventName(ev?.participants?.[1]);
+
+  let text;
+  if (kind === "goal") {
+    const ownGoal = /own goal/i.test(typeText) || /own goal/i.test(ev?.text || "");
+    const penalty = /penalty/i.test(typeText);
+    const header = /header/i.test(typeText);
+    text = `¡Gol de ${team}!${p1 ? ` ${p1}` : ""}${penalty ? " (de penal)" : header ? " (de cabeza)" : ""}${ownGoal ? " (en contra)" : ""}${p2 && !ownGoal && !penalty ? ` — asiste ${p2}` : ""}`;
+  } else if (kind === "yellow") {
+    text = `Amarilla para ${p1 || "—"} (${team})`;
+  } else if (kind === "red") {
+    text = `Roja para ${p1 || "—"} (${team})`;
+  } else {
+    text = p1 && p2 ? `Cambio en ${team}: entra ${p1} por ${p2}` : `Cambio en ${team}`;
+  }
+
+  return {
+    minute,
+    sort: (ev?.period?.number || 0) * 100000 + (ev?.clock?.value || 0),
+    type: kind,
+    team,
+    text,
+  };
+}
+
+/**
+ * Fetches the goal/card/substitution timeline of one match from ESPN's
+ * `summary` endpoint (`keyEvents`). Live matches revalidate fast so new goals
+ * show up within ~30s; finished ones are effectively immutable so they cache
+ * longer. Any failure degrades to an empty timeline, never an error.
+ */
+export async function fetchMatchEvents(eventId, { live = false } = {}) {
+  try {
+    const res = await fetch(`${SUMMARY_URL}?event=${eventId}`, { next: { revalidate: live ? 30 : 600 } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data?.keyEvents || [])
+      .map(transformKeyEvent)
+      .filter(Boolean)
+      .sort((a, b) => a.sort - b.sort)
+      .map(({ sort, ...ev }) => ev);
+  } catch {
+    return [];
+  }
+}
+
+const DAY_MS = 86_400_000;
+
+function dateParam(ms) {
+  return new Date(ms).toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+/**
+ * Fetches the current World Cup picture: live matches, recently finished ones
+ * (last 24h) and the next matchday's fixtures. Asking ESPN for a date *window*
+ * (yesterday → +7 days) instead of "today" is what lets the hero countdown
+ * roll over to the next scheduled match the moment a matchday ends, without
+ * waiting for ESPN's day boundary or a manual page reload. Live and finished
+ * matches also get their real event timeline attached.
+ */
 export async function fetchScoreboard() {
-  const res = await fetch(SCOREBOARD_URL, { next: { revalidate: 30 } });
+  const now = Date.now();
+  const res = await fetch(`${SCOREBOARD_URL}?dates=${dateParam(now - DAY_MS)}-${dateParam(now + 7 * DAY_MS)}&limit=100`, {
+    next: { revalidate: 30 },
+  });
   if (!res.ok) throw new Error(`ESPN scoreboard ${res.status}`);
   const data = await res.json();
-  const matches = (data?.events || []).map(transformMatch).filter(Boolean);
+
+  const all = (data?.events || [])
+    .map(transformMatch)
+    .filter(Boolean)
+    .sort((a, b) => new Date(a.kickoffISO || 0) - new Date(b.kickoffISO || 0));
+
+  const live = all.filter((m) => m.status === "LIVE");
+  const recentFinals = all.filter(
+    (m) => m.status === "FINAL" && m.kickoffISO && now - new Date(m.kickoffISO).getTime() < DAY_MS
+  );
+  const upcoming = all.filter((m) => m.status === "SCHEDULED" && m.kickoffISO && new Date(m.kickoffISO).getTime() > now);
+  // Only the next matchday's fixtures (not the whole week) so the cards grid
+  // stays focused; `dateShort` is already pinned to Colombia time.
+  const nextDay = upcoming[0]?.dateShort;
+  const nextUp = upcoming.filter((m) => m.dateShort === nextDay).slice(0, 6);
+
+  const matches = [...recentFinals, ...live, ...nextUp].sort(
+    (a, b) => new Date(a.kickoffISO || 0) - new Date(b.kickoffISO || 0)
+  );
+
+  // Real timeline for everything already played / in play (bounded for cost).
+  await Promise.allSettled(
+    matches
+      .filter((m) => m.status !== "SCHEDULED")
+      .slice(0, 8)
+      .map(async (m) => {
+        m.events = await fetchMatchEvents(m.id, { live: m.status === "LIVE" });
+      })
+  );
+
   return { matches, day: data?.day?.date || null };
 }
 

@@ -14,12 +14,14 @@ function diffParts(target) {
   };
 }
 
-// Live ticking countdown to an ISO kickoff. Starts as `null` (so server and the
-// first client paint match — no hydration mismatch) and fills in on the next
-// frame, then ticks every second.
+// Live ticking countdown to an ISO kickoff. Starts as `undefined` (so server
+// and the first client paint match — no hydration mismatch) and fills in on
+// the next frame, then ticks every second. Once the target passes (`null`) it
+// shows a "starting" state instead of vanishing, covering the gap until the
+// data provider actually flips the match to live.
 export default function Countdown({ iso, className = "" }) {
   const target = iso ? new Date(iso).getTime() : NaN;
-  const [parts, setParts] = useState(null);
+  const [parts, setParts] = useState(undefined);
 
   useEffect(() => {
     if (Number.isNaN(target)) return;
@@ -31,7 +33,16 @@ export default function Countdown({ iso, className = "" }) {
     };
   }, [target]);
 
-  if (Number.isNaN(target) || !parts) return null;
+  if (Number.isNaN(target) || parts === undefined) return null;
+
+  if (parts === null) {
+    return (
+      <span className={`inline-flex items-center gap-2 ${className}`}>
+        <span className="pulse-dot" style={{ width: 8, height: 8 }} />
+        <span className="font-anton text-lg sm:text-xl tracking-[0.2em] text-neon">¡POR COMENZAR!</span>
+      </span>
+    );
+  }
 
   const seg = (val, label) => (
     <div className="flex flex-col items-center">

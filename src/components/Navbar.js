@@ -70,6 +70,9 @@ export default function Navbar() {
   // briefly so the smooth-scroll animation can't flicker the selection.
   const handleNavClick = (href) => {
     setActive(href);
+    // Reading the clock inside an event handler is fine — the purity rule
+    // can't tell this closure only ever runs on click, never during render.
+    // eslint-disable-next-line react-hooks/purity
     lockUntil.current = Date.now() + 800;
   };
 
@@ -85,7 +88,7 @@ export default function Navbar() {
 
       <header className="fixed top-0 inset-x-0 z-50 px-4 sm:px-8 py-3">
         <nav
-          className={`liquid-glass max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3 transition-all duration-300 ${
+          className={`liquid-glass relative z-50 max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3 transition-all duration-300 ${
             scrolled ? "shadow-[0_8px_40px_rgba(1,8,40,0.6)]" : ""
           }`}
         >
@@ -131,24 +134,36 @@ export default function Navbar() {
         </nav>
 
         {open && (
-          <div className="md:hidden liquid-glass max-w-7xl mx-auto mt-2 px-6 py-5">
-            <ul className="flex flex-col gap-4 font-anton text-base tracking-wider text-cream/80">
-              {links.map((l) => (
-                <li key={l.href}>
-                  <a
-                    href={l.href}
-                    onClick={() => {
-                      handleNavClick(l.href);
-                      setOpen(false);
-                    }}
-                    className={`transition-colors ${active === l.href ? "text-neon" : "hover:text-neon"}`}
-                  >
-                    {l.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <>
+            {/* Tap-away backdrop: closes the menu and dims the page so the
+                dropdown reads as a layer above the content, not mixed into it. */}
+            <div
+              className="md:hidden fixed inset-0 z-40 bg-bgnavy/60"
+              aria-hidden="true"
+              onClick={() => setOpen(false)}
+            />
+            {/* Opaque background (glass-solid): the translucent glass made the
+                menu illegible over the hero video on mobile browsers that
+                don't apply backdrop-filter. */}
+            <div className="md:hidden relative z-50 liquid-glass glass-solid max-w-7xl mx-auto mt-2 px-6 py-5 shadow-[0_20px_60px_rgba(1,8,40,0.85)]">
+              <ul className="flex flex-col gap-1 font-anton text-base tracking-wider text-cream/90">
+                {links.map((l) => (
+                  <li key={l.href}>
+                    <a
+                      href={l.href}
+                      onClick={() => {
+                        handleNavClick(l.href);
+                        setOpen(false);
+                      }}
+                      className={`block py-2.5 transition-colors ${active === l.href ? "text-neon" : "hover:text-neon"}`}
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
       </header>
     </>
