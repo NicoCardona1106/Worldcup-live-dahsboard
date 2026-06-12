@@ -86,8 +86,18 @@ esa fecha (el torneo arranca recién el 11 de junio de 2026). No inventes una fe
 PARTIDOS (${matchesAreLive ? "EN VIVO — ESPN" : "DE MUESTRA"}):
 ${JSON.stringify(matches, null, 2)}
 
-EVENTOS DE PARTIDO DE EJEMPLO (Argentina vs Francia, ilustrativo):
-${JSON.stringify(matchEvents, null, 2)}
+${
+  matchesAreLive
+    ? `IMPORTANTE — cronología de los partidos: cada partido en vivo o finalizado de arriba trae su
+cronología REAL en el campo "events" (goles con goleador y asistencia, tarjetas y cambios, con
+minuto y equipo). Cuando te pregunten qué pasó en un partido, quién marcó o detalles del encuentro,
+usá ÚNICA Y EXCLUSIVAMENTE esos eventos. Si "events" viene vacío, decí que todavía no hay
+incidencias registradas. NUNCA menciones goles ni jugadores que no aparezcan en esos datos —
+inventar un goleador es el peor error posible.`
+    : `EVENTOS DE PARTIDO DE EJEMPLO (Argentina vs Francia, ilustrativo — datos de demostración,
+nunca los atribuyas a un partido real):
+${JSON.stringify(matchEvents, null, 2)}`
+}
 
 TABLA DE GRUPOS (${groupsAreLive ? "EN VIVO — ESPN" : "DE MUESTRA"}):
 ${JSON.stringify(groups, null, 2)}
