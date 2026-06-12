@@ -88,7 +88,7 @@ export default function Navbar() {
 
       <header className="fixed top-0 inset-x-0 z-50 px-4 sm:px-8 py-3">
         <nav
-          className={`liquid-glass relative z-50 max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3 transition-all duration-300 ${
+          className={`liquid-glass glass-solid-mobile relative z-50 max-w-7xl mx-auto flex items-center justify-between px-5 sm:px-8 py-3 transition-all duration-300 ${
             scrolled ? "shadow-[0_8px_40px_rgba(1,8,40,0.6)]" : ""
           }`}
         >

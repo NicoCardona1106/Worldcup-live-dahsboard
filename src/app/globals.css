@@ -73,13 +73,36 @@ section[id],
     pointer-events: none;
   }
 
-  /* Opaque variant for floating overlays (chat panel, mobile menu). The
-     translucent glass relies on backdrop-filter, which several mobile
-     browsers skip or break over video/blend-mode layers — leaving the panel
-     see-through and the text unreadable. Declared after .liquid-glass so it
-     wins the cascade at equal specificity. */
+  /* Fully opaque variant for floating overlays (chat panel, mobile menu,
+     mobile navbar). The translucent glass relies on backdrop-filter, which
+     several mobile browsers skip or break over video/blend-mode layers —
+     leaving the panel see-through and the text unreadable. 100% opaque hex
+     colors (no alpha at all) and no blur/tint, so nothing behind can bleed
+     through. Declared after .liquid-glass so it wins the cascade at equal
+     specificity. */
   .glass-solid {
-    background: linear-gradient(160deg, rgba(10, 20, 64, 0.97), rgba(2, 8, 36, 0.985));
+    background: linear-gradient(160deg, #0d173f, #050b28);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-color: rgba(239, 244, 255, 0.2);
+  }
+  .glass-solid::before {
+    content: none;
+  }
+
+  /* Same full opacity, but only below the md breakpoint — for the navbar,
+     which keeps its liquid-glass look on desktop where backdrop-filter is
+     reliable. */
+  @media (max-width: 47.999rem) {
+    .glass-solid-mobile {
+      background: linear-gradient(160deg, #0d173f, #050b28);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border-color: rgba(239, 244, 255, 0.2);
+    }
+    .glass-solid-mobile::before {
+      content: none;
+    }
   }
 }
 
