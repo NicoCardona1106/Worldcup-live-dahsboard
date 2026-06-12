@@ -431,9 +431,31 @@ function transformStandingsEntry(entry) {
   };
 }
 
+/**
+ * Whether any World Cup match is in play right now. Hits the *exact same*
+ * scoreboard URL (and revalidate) as `fetchScoreboard`, so Next's fetch cache
+ * serves it from the entry that request already keeps warm — zero extra
+ * upstream traffic. Used to tighten the standings poll while games run.
+ */
+export async function hasLiveMatches() {
+  try {
+    const now = Date.now();
+    const res = await fetch(`${SCOREBOARD_URL}?dates=${dateParam(now - DAY_MS)}-${dateParam(now + 7 * DAY_MS)}&limit=100`, {
+      next: { revalidate: 10 },
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    return (data?.events || []).some((e) => e?.competitions?.[0]?.status?.type?.state === "in");
+  } catch {
+    return false;
+  }
+}
+
 /** Fetches & transforms the World Cup group standings, keyed by group name. */
 export async function fetchStandings() {
-  const res = await fetch(STANDINGS_URL, { next: { revalidate: 300 } });
+  // 30s: points/played/goal-difference move every time a match ends (and ESPN
+  // refreshes some columns mid-match), so the table follows close behind.
+  const res = await fetch(STANDINGS_URL, { next: { revalidate: 30 } });
   if (!res.ok) throw new Error(`ESPN standings ${res.status}`);
   const data = await res.json();
   const groups = {};

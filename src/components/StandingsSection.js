@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import BarFill from "./BarFill";
+import FreshnessBadge from "./FreshnessBadge";
 import Reveal from "./Reveal";
 import Counter from "./Counter";
 import TeamBadge from "./TeamBadge";
@@ -87,7 +88,7 @@ function TopScorers() {
 
 export default function StandingsSection() {
   const [tab, setTab] = useState("clasificacion");
-  const { data: groups, live } = useLiveStandings(placeholderGroups);
+  const { data: groups, live, updatedAt } = useLiveStandings(placeholderGroups);
   const groupNames = Object.keys(groups);
   const { data: liveStats, live: statsLive } = useLiveTournamentStats();
   const stats = statsLive ? liveStats : tournamentStats;
@@ -103,6 +104,7 @@ export default function StandingsSection() {
               <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
                 {live ? "● EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
               </span>
+              <FreshnessBadge updatedAt={updatedAt} />
             </div>
           </div>
 

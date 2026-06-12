@@ -12,15 +12,17 @@ import { useEffect, useState } from "react";
  * `null`/`undefined`/an empty array|object when there's nothing usable yet.
  *
  * Liveness:
- * - `fastWhen(picked)` + `fastMs`: when the predicate matches (e.g. a match
- *   is in play), polling tightens from `intervalMs` to `fastMs`, so live
- *   scores update in seconds instead of high tens of seconds.
+ * - `fastWhen(picked)` / `fastWhenBody(body)` + `fastMs`: when either
+ *   predicate matches (e.g. a match is in play), polling tightens from
+ *   `intervalMs` to `fastMs`, so live data updates in seconds instead of
+ *   high tens of seconds. `fastWhenBody` sees the whole response, for
+ *   endpoints whose liveness signal rides outside the picked slice.
  * - The page refetches immediately when the tab becomes visible again —
  *   browsers throttle/suspend timers in background tabs, which otherwise
  *   leaves a stale score on screen exactly when someone switches back to
  *   check it (the "I had to reload to see the goal" effect).
  */
-function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = {}) {
+function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen, fastWhenBody } = {}) {
   const [data, setData] = useState(placeholder);
   const [live, setLive] = useState(false);
   // When the last successful fetch landed (for "↻ hace Xs" freshness badges),
@@ -48,7 +50,7 @@ function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = 
           setData(picked);
           setLive(true);
           setUpdatedAt(Date.now());
-          delay = fastMs && fastWhen?.(picked) ? fastMs : intervalMs;
+          delay = fastMs && (fastWhen?.(picked) || fastWhenBody?.(body)) ? fastMs : intervalMs;
         }
       } catch {
         // Network hiccup — keep showing whatever we already had (live or placeholder).
@@ -93,8 +95,14 @@ export function useLiveMatches(placeholder, { pollMs = 45_000, livePollMs = 12_0
   });
 }
 
-export function useLiveStandings(placeholder, { pollMs = 5 * 60_000 } = {}) {
-  return useLiveData("/api/standings", (body) => body?.groups, placeholder, pollMs);
+// Standings tighten to 45s while matches are in play (`hasLive` rides along
+// in the response, derived from the already-cached scoreboard) — points,
+// played and goal difference follow the matches instead of lagging minutes.
+export function useLiveStandings(placeholder, { pollMs = 5 * 60_000, livePollMs = 45_000 } = {}) {
+  return useLiveData("/api/standings", (body) => body?.groups, placeholder, pollMs, {
+    fastMs: livePollMs,
+    fastWhenBody: (body) => Boolean(body?.hasLive),
+  });
 }
 
 // Knockout bracket — stays empty (`live: false`) until ESPN actually publishes
