@@ -41,8 +41,17 @@ export default function Navbar() {
     if (els.length === 0) return;
 
     const NAV_OFFSET = 110; // navbar height + breathing room
+    const LOCK_GRACE_MS = 500;
     const sync = () => {
-      if (Date.now() < lockUntil.current) return; // hold selection after a click
+      // Hold the clicked selection while the smooth scroll is still moving:
+      // every scroll event during the lock pushes the release half a second
+      // further out, so the indicator can't flicker through the sections the
+      // animation passes by — no matter how long the trip is. It frees up
+      // 500ms after the scrolling settles.
+      if (Date.now() < lockUntil.current) {
+        lockUntil.current = Date.now() + LOCK_GRACE_MS;
+        return;
+      }
       const y = window.scrollY + NAV_OFFSET;
       let current = els[0].id;
       for (const el of els) {
@@ -66,8 +75,9 @@ export default function Navbar() {
     };
   }, []);
 
-  // Light the indicator immediately on click and lock out the scroll handler
-  // briefly so the smooth-scroll animation can't flicker the selection.
+  // Light the indicator immediately on click and arm the scroll lock. The
+  // sync handler keeps renewing it on every scroll event, so the selection
+  // holds for the whole smooth-scroll trip and releases 500ms after it stops.
   const handleNavClick = (href) => {
     setActive(href);
     // Reading the clock inside an event handler is fine — the purity rule
