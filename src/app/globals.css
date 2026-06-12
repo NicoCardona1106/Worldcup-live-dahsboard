@@ -228,6 +228,44 @@ section[id],
   animation: shimmer 4s linear infinite;
 }
 
+/* ===== Goal celebration ===== */
+/* Score digits jump and glow when a goal lands in the live data. */
+@keyframes goal-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.28); }
+  55% { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+.goal-pop {
+  animation: goal-pop 0.8s var(--ease-out-soft) 3;
+  color: #6FFF00;
+  text-shadow: 0 0 24px rgba(111, 255, 0, 0.85), 0 0 60px rgba(111, 255, 0, 0.4);
+}
+
+/* Whole-card glow pulse for the match card that just scored. */
+@keyframes goal-flash {
+  0%, 100% { box-shadow: 0 0 14px rgba(111, 255, 0, 0.3); }
+  50% { box-shadow: 0 0 44px rgba(111, 255, 0, 0.85), inset 0 0 30px rgba(111, 255, 0, 0.18); }
+}
+.goal-flash {
+  animation: goal-flash 0.9s var(--ease-in-out-soft) 5;
+}
+
+/* Confetti pieces — fall through the celebrating container and fade out. */
+@keyframes confetti-fall {
+  0% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(80vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: absolute;
+  top: -14px;
+  border-radius: 2px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
 /* AI orb */
 @keyframes orb-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(111, 255, 0, 0.55), 0 0 24px rgba(111, 255, 0, 0.5); }

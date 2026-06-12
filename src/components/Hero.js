@@ -6,10 +6,16 @@ import LiveTicker from "./LiveTicker";
 import TeamBadge from "./TeamBadge";
 import BackgroundVideo from "./BackgroundVideo";
 import BarFill from "./BarFill";
+import Confetti from "./Confetti";
 import Countdown from "./Countdown";
+import FreshnessBadge from "./FreshnessBadge";
 import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
+import useGoalCelebration from "@/hooks/useGoalCelebration";
+import { useTimeZonePref, localKickoff } from "@/hooks/usePrefs";
 import { matches as placeholderMatches } from "@/lib/data";
+
+const EVENT_ICON = { goal: "⚽", yellow: "🟨", red: "🟥", sub: "🔁" };
 
 // `match.stats` comes from ESPN's scoreboard (`competitors[].statistics`),
 // shaped as { possession: [h,a], shots: [h,a], shotsOnTarget: [h,a],
@@ -31,7 +37,8 @@ function statsToBars(stats) {
 
 export default function Hero() {
   const videoRef = useRef(null);
-  const { data: matches, live } = useLiveMatches(placeholderMatches);
+  const { data: matches, live, updatedAt, pending } = useLiveMatches(placeholderMatches);
+  const { isLocal } = useTimeZonePref();
 
   // Featured match priority: a live one > the soonest *upcoming* scheduled
   // fixture > the most recent final. Crucially, a finished match never blocks
@@ -57,6 +64,13 @@ export default function Hero() {
   // Stat bars only make sense once the match has been played — and only from
   // real provider data (no invented fallback numbers).
   const stats = featuredIsLive || featuredIsFinal ? statsToBars(featured?.stats) : null;
+
+  // ¡GOOOL! — fires when the live score jumps between polls.
+  const celebrating = useGoalCelebration(featured);
+  // Latest real incident (goal/card/sub) so the hero narrates the live match.
+  const lastEvent = featuredIsLive && featured.events?.length ? featured.events[featured.events.length - 1] : null;
+  // Kickoff in the visitor's own timezone when the navbar toggle says so.
+  const localTime = isLocal ? localKickoff(featured?.kickoffISO) : null;
 
   // Parallax on the background video — throttled to one update per animation
   // frame (and GPU-composited via translate3d) so scrolling stays smooth, and
@@ -107,15 +121,39 @@ export default function Hero() {
           </h1>
         </Reveal>
 
+        {/* Skeleton while the very first scoreboard response is in flight —
+            avoids flashing sample fixtures before the real ones replace them */}
+        {pending && (
+          <div className="mt-12 sm:mt-16 liquid-glass max-w-3xl mx-auto px-6 sm:px-12 py-10 animate-pulse" aria-hidden="true">
+            <div className="h-3 w-40 bg-cream/10 rounded-full mx-auto" />
+            <div className="mt-9 grid grid-cols-3 items-center gap-3 sm:gap-6">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 bg-cream/10 rounded-full" />
+                <div className="h-3 w-20 bg-cream/10 rounded-full" />
+              </div>
+              <div className="h-10 w-24 bg-cream/10 rounded-xl mx-auto" />
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 bg-cream/10 rounded-full" />
+                <div className="h-3 w-20 bg-cream/10 rounded-full" />
+              </div>
+            </div>
+            <div className="mt-9 h-3 w-56 bg-cream/10 rounded-full mx-auto" />
+          </div>
+        )}
+
         {/* Main scoreboard — driven by the live (or next-up) featured match */}
-        {featured && (
+        {!pending && featured && (
           <Reveal delay={120} className="mt-12 sm:mt-16 liquid-glass max-w-3xl mx-auto px-6 sm:px-12 py-10 hover:scale-[1.01]">
+            {celebrating && <Confetti />}
             {/* Status + group/venue, centered */}
             <div className="flex flex-col items-center gap-3">
               {featuredIsLive ? (
-                <span className="inline-flex items-center gap-2">
-                  <span className="pulse-dot" />
-                  <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-neon">EN VIVO</span>
+                <span className="inline-flex items-center gap-3">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="pulse-dot" />
+                    <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-neon">EN VIVO</span>
+                  </span>
+                  <FreshnessBadge updatedAt={updatedAt} />
                 </span>
               ) : (
                 <span className="font-anton text-xs sm:text-sm tracking-[0.3em] text-cream/50">
@@ -140,9 +178,12 @@ export default function Hero() {
               <div className="flex flex-col items-center justify-center gap-2">
                 {featuredIsLive || featured.status === "FINAL" ? (
                   <>
-                    <p className="font-anton text-5xl sm:text-7xl tracking-tight tabular-nums">
+                    <p className={`font-anton text-5xl sm:text-7xl tracking-tight tabular-nums ${celebrating ? "goal-pop" : ""}`}>
                       {featured.homeScore} <span className="text-cream/30">—</span> {featured.awayScore}
                     </p>
+                    {celebrating && (
+                      <span className="rise-in font-anton text-lg sm:text-xl tracking-[0.25em] text-neon neon-text">¡GOOOL!</span>
+                    )}
                     {featuredIsLive && featured.minute != null && (
                       <span className="inline-flex items-center gap-1.5 font-mono text-[10px] sm:text-xs tracking-widest text-red">
                         <span className="pulse-dot" style={{ width: 6, height: 6, background: "#FF4D4D" }} />
@@ -163,18 +204,33 @@ export default function Hero() {
               </div>
             </div>
 
+            {/* Latest real incident — the hero narrates the live match */}
+            {lastEvent && (
+              <p
+                key={`${lastEvent.minute}-${lastEvent.text}`}
+                className="rise-in mt-7 font-mono text-[11px] sm:text-xs text-cream/75 leading-relaxed"
+              >
+                <span className="font-anton text-neon">{lastEvent.minute}</span>{" "}
+                {EVENT_ICON[lastEvent.type] || "•"} {lastEvent.text}
+              </p>
+            )}
+
             {/* Kickoff date + time + live countdown + calendar/share (scheduled only) */}
             {!featuredIsLive && featured.status !== "FINAL" && featured.time && (
               <div className="mt-9 flex flex-col items-center gap-5">
                 <div className="flex flex-col items-center gap-3">
-                  {featured.dateShort && (
-                    <span className="font-mono text-[11px] sm:text-xs tracking-[0.25em] text-cream/50">📅 {featured.dateShort}</span>
+                  {(localTime?.dateShort || featured.dateShort) && (
+                    <span className="font-mono text-[11px] sm:text-xs tracking-[0.25em] text-cream/50">
+                      📅 {localTime?.dateShort || featured.dateShort}
+                    </span>
                   )}
                   <div className="inline-flex items-center gap-4 rounded-full border border-cream/15 bg-cream/5 px-7 py-3.5">
                     <span className="text-lg sm:text-xl">🕐</span>
-                    <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{featured.time}</span>
+                    <span className="font-anton text-2xl sm:text-3xl tracking-wide tabular-nums">{localTime?.time || featured.time}</span>
                     <span className="w-px h-6 bg-cream/20" />
-                    <span className="font-mono text-[10px] sm:text-xs tracking-[0.25em] text-cream/50">HORA COLOMBIA</span>
+                    <span className="font-mono text-[10px] sm:text-xs tracking-[0.25em] text-cream/50">
+                      {localTime ? "TU HORA" : "HORA COLOMBIA"}
+                    </span>
                   </div>
                 </div>
 

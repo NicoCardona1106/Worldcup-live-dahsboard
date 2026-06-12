@@ -1,13 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BarFill from "./BarFill";
+import FreshnessBadge from "./FreshnessBadge";
 import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
 import KickoffTime from "./KickoffTime";
 import BackgroundVideo from "./BackgroundVideo";
 import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
+import useGoalCelebration from "@/hooks/useGoalCelebration";
+import { useFavoriteTeams, useTimeZonePref, localKickoff } from "@/hooks/usePrefs";
 import { matches as placeholderMatches, matchEvents, isColombia } from "@/lib/data";
 
 const eventIcon = { goal: "⚽", yellow: "🟨", red: "🟥", sub: "🔁" };
@@ -34,10 +37,39 @@ function pairPct(pair) {
   return total ? Math.round((pair[0] / total) * 100) : 50;
 }
 
+// One team row inside a card: badge + name + follow star + score.
+function TeamRow({ name, flag, score, isFavorite, onToggleFavorite }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2 min-w-0">
+        <TeamBadge flag={flag} size="text-xl" />
+        <span className="font-anton text-sm tracking-wide truncate">{name.toUpperCase()}</span>
+        <button
+          onClick={() => onToggleFavorite(name)}
+          aria-label={isFavorite ? `Dejar de seguir a ${name}` : `Seguir a ${name}`}
+          title={isFavorite ? "Dejar de seguir" : "Seguir equipo"}
+          className={`shrink-0 text-sm leading-none transition-all hover:scale-125 ${
+            isFavorite ? "text-gold" : "text-cream/25 hover:text-gold/70"
+          }`}
+        >
+          {isFavorite ? "★" : "☆"}
+        </button>
+      </div>
+      <span className="font-anton text-xl tabular-nums shrink-0">{score}</span>
+    </div>
+  );
+}
+
 function MatchCard({ m, usingSample, expanded, onToggle, delay = 0 }) {
   const live = m.status === "LIVE";
   const finished = m.status === "FINAL";
   const colombia = isColombia(m.homeTeam) || isColombia(m.awayTeam);
+  const { isFavorite, toggleFavorite } = useFavoriteTeams();
+  const favorite = isFavorite(m.homeTeam) || isFavorite(m.awayTeam);
+  const { isLocal } = useTimeZonePref();
+  const localTime = isLocal && !live && !finished ? localKickoff(m.kickoffISO) : null;
+  // Glow pulse on the card whose score just changed.
+  const celebrating = useGoalCelebration(m);
   // Each stat pair can be null independently (provider may omit some), so the
   // rows render one by one instead of assuming the whole object is complete.
   const stats = (live || finished) && m.stats ? m.stats : null;
@@ -46,13 +78,17 @@ function MatchCard({ m, usingSample, expanded, onToggle, delay = 0 }) {
   return (
     <Reveal
       delay={delay}
-      className={`liquid-glass px-6 py-7 flex flex-col ${
-        live ? "neon-border" : colombia ? "!border-gold/40 shadow-[0_0_22px_rgba(255,215,0,0.15)]" : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"
+      className={`liquid-glass px-6 py-7 flex flex-col ${celebrating ? "goal-flash" : ""} ${
+        live
+          ? "neon-border"
+          : colombia || favorite
+            ? "!border-gold/40 shadow-[0_0_22px_rgba(255,215,0,0.15)]"
+            : "hover:shadow-[0_0_24px_rgba(239,244,255,0.08)]"
       }`}
     >
-      {colombia && (
+      {(colombia || favorite) && (
         <span className="self-start mb-3 inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-1 font-mono text-[9px] tracking-widest text-gold">
-          🇨🇴 TU SELECCIÓN
+          {colombia ? "🇨🇴 TU SELECCIÓN" : "⭐ TU EQUIPO"}
         </span>
       )}
       <div className="flex items-center justify-between mb-5 gap-2">
@@ -64,28 +100,32 @@ function MatchCard({ m, usingSample, expanded, onToggle, delay = 0 }) {
           </span>
         ) : (
           <div className="flex flex-col items-end gap-0.5 shrink-0">
-            {!finished && m.dateShort && (
-              <span className="font-mono text-[9px] tracking-widest text-cream/40">{m.dateShort}</span>
+            {!finished && (localTime?.dateShort || m.dateShort) && (
+              <span className="font-mono text-[9px] tracking-widest text-cream/40">{localTime?.dateShort || m.dateShort}</span>
             )}
-            <KickoffTime time={finished ? "FINAL" : m.time} className="font-mono text-[11px] tracking-widest text-cream/50" />
+            <KickoffTime time={finished ? "FINAL" : m.time} iso={m.kickoffISO} className="font-mono text-[11px] tracking-widest text-cream/50" />
           </div>
         )}
       </div>
 
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <TeamBadge flag={m.homeFlag ?? m.homeLogo} size="text-xl" />
-          <span className="font-anton text-sm tracking-wide truncate">{m.homeTeam.toUpperCase()}</span>
-        </div>
-        <span className="font-anton text-xl tabular-nums shrink-0">{live || finished ? m.homeScore : "–"}</span>
+      <div className="mb-2">
+        <TeamRow
+          name={m.homeTeam}
+          flag={m.homeFlag ?? m.homeLogo}
+          score={live || finished ? m.homeScore : "–"}
+          isFavorite={isFavorite(m.homeTeam)}
+          onToggleFavorite={toggleFavorite}
+        />
       </div>
       <p className="font-mono text-[10px] text-center text-cream/30 my-1">VS</p>
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2 min-w-0">
-          <TeamBadge flag={m.awayFlag ?? m.awayLogo} size="text-xl" />
-          <span className="font-anton text-sm tracking-wide truncate">{m.awayTeam.toUpperCase()}</span>
-        </div>
-        <span className="font-anton text-xl tabular-nums shrink-0">{live || finished ? m.awayScore : "–"}</span>
+      <div className="mb-6">
+        <TeamRow
+          name={m.awayTeam}
+          flag={m.awayFlag ?? m.awayLogo}
+          score={live || finished ? m.awayScore : "–"}
+          isFavorite={isFavorite(m.awayTeam)}
+          onToggleFavorite={toggleFavorite}
+        />
       </div>
 
       {live && m.minute != null && <p className="font-anton text-xs text-neon neon-text mb-5">MINUTO {m.minute}&apos;</p>}
@@ -153,7 +193,16 @@ function MatchCard({ m, usingSample, expanded, onToggle, delay = 0 }) {
 
 export default function MatchesSection() {
   const [expandedId, setExpandedId] = useState(null);
-  const { data: matches, live } = useLiveMatches(placeholderMatches);
+  const { data: matches, live, updatedAt, pending } = useLiveMatches(placeholderMatches);
+  const { favorites } = useFavoriteTeams();
+
+  // Followed teams' matches first (stable order otherwise — kickoff order
+  // comes from the API). Colombia is always treated as followed.
+  const ordered = useMemo(() => {
+    const isPinned = (m) =>
+      favorites.includes(m.homeTeam) || favorites.includes(m.awayTeam) || isColombia(m.homeTeam) || isColombia(m.awayTeam);
+    return [...matches].sort((a, b) => Number(isPinned(b)) - Number(isPinned(a)));
+  }, [matches, favorites]);
 
   return (
     <section id="en-vivo" className="relative py-28 sm:py-36 overflow-hidden">
@@ -167,15 +216,38 @@ export default function MatchesSection() {
         <Reveal className="mb-14 flex flex-col items-center text-center gap-3">
           <p className="font-condiment text-2xl sm:text-4xl text-neon/90">today&apos;s fixtures</p>
           <h2 className="font-anton text-5xl sm:text-7xl tracking-tight">PARTIDOS DEL DÍA</h2>
-          <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
-            {live ? "● DATOS EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
+          <span className="inline-flex items-center gap-3">
+            <span className={`font-mono text-[10px] tracking-widest px-3 py-1.5 rounded-full border ${live ? "border-neon/40 text-neon" : "border-cream/15 text-cream/40"}`}>
+              {live ? "● DATOS EN VIVO — ESPN" : "○ DATOS DE MUESTRA"}
+            </span>
+            <FreshnessBadge updatedAt={updatedAt} />
           </span>
         </Reveal>
 
         <div id="partidos" className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {matches.map((m, i) => (
-            <MatchCard key={m.id} m={m} usingSample={!live} delay={i * 90} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
-          ))}
+          {pending
+            ? Array.from({ length: 3 }, (_, i) => (
+                // Skeleton cards while the first scoreboard response arrives —
+                // no sample-fixtures flash before the real ones land.
+                <div key={i} className="liquid-glass px-6 py-7 animate-pulse" aria-hidden="true">
+                  <div className="flex justify-between mb-6">
+                    <div className="h-3 w-24 bg-cream/10 rounded-full" />
+                    <div className="h-3 w-12 bg-cream/10 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-7 h-7 bg-cream/10 rounded-full" />
+                    <div className="h-3 w-28 bg-cream/10 rounded-full" />
+                  </div>
+                  <div className="flex items-center gap-2 mb-8">
+                    <div className="w-7 h-7 bg-cream/10 rounded-full" />
+                    <div className="h-3 w-24 bg-cream/10 rounded-full" />
+                  </div>
+                  <div className="h-10 w-36 bg-cream/10 rounded-full" />
+                </div>
+              ))
+            : ordered.map((m, i) => (
+                <MatchCard key={m.id} m={m} usingSample={!live} delay={i * 90} expanded={expandedId === m.id} onToggle={(id) => setExpandedId((cur) => (cur === id ? null : id))} />
+              ))}
         </div>
       </div>
     </section>

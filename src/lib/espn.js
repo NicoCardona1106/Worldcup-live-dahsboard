@@ -424,6 +424,8 @@ function transformStandingsEntry(entry) {
     g: stat("wins"),
     e: stat("ties"),
     p: stat("losses"),
+    // Goal difference, signed as ESPN displays it ("+2", "-1", "0").
+    dif: entry.stats?.find((s) => s.name === "pointDifferential")?.displayValue ?? null,
     pts: stat("points"),
     top: rank > 0 && rank <= 2,
   };

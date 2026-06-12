@@ -20,6 +20,7 @@ function GroupTable({ name, teams, delay = 0 }) {
             <th className="font-normal pb-3">G</th>
             <th className="font-normal pb-3">E</th>
             <th className="font-normal pb-3">P</th>
+            <th className="font-normal pb-3">DIF</th>
             <th className="font-normal pb-3">PTS</th>
           </tr>
         </thead>
@@ -44,6 +45,7 @@ function GroupTable({ name, teams, delay = 0 }) {
                 <td className="text-center py-2.5">{t.g}</td>
                 <td className="text-center py-2.5">{t.e}</td>
                 <td className="text-center py-2.5">{t.p}</td>
+                <td className="text-center py-2.5 tabular-nums">{t.dif ?? "—"}</td>
                 <td className={`text-center py-2.5 font-anton ${col ? "text-gold" : t.top ? "text-neon" : "text-cream"}`}>{t.pts}</td>
               </tr>
             );

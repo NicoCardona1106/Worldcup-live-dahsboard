@@ -23,6 +23,11 @@ import { useEffect, useState } from "react";
 function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = {}) {
   const [data, setData] = useState(placeholder);
   const [live, setLive] = useState(false);
+  // When the last successful fetch landed (for "↻ hace Xs" freshness badges),
+  // and whether the very first request is still in flight (for skeletons —
+  // placeholder data would otherwise flash before being replaced).
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [pending, setPending] = useState(true);
 
   useEffect(() => {
     let stopped = false;
@@ -42,10 +47,13 @@ function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = 
         if (hasData) {
           setData(picked);
           setLive(true);
+          setUpdatedAt(Date.now());
           delay = fastMs && fastWhen?.(picked) ? fastMs : intervalMs;
         }
       } catch {
         // Network hiccup — keep showing whatever we already had (live or placeholder).
+      } finally {
+        if (!stopped) setPending(false);
       }
     }
 
@@ -72,7 +80,7 @@ function useLiveData(url, pick, placeholder, intervalMs, { fastMs, fastWhen } = 
     };
   }, [url, intervalMs]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { data, live };
+  return { data, live, updatedAt, pending };
 }
 
 // Matches poll fast (12s) while anything is in play, easing back to 45s when

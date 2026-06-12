@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTimeZonePref } from "@/hooks/usePrefs";
 
 const links = [
   { href: "#hero", label: "INICIO" },
@@ -15,6 +16,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [progress, setProgress] = useState(0);
   const [active, setActive] = useState("#hero");
+  const { isLocal, toggle: toggleTz } = useTimeZonePref();
 
   // Shadow + scroll-progress bar, both driven by a single scroll handler.
   useEffect(() => {
@@ -129,6 +131,16 @@ export default function Navbar() {
           </ul>
 
           <div className="flex items-center gap-3">
+            {/* Timezone toggle: Colombia time (server default) ↔ visitor's local time */}
+            <button
+              onClick={toggleTz}
+              title={isLocal ? "Cambiar a hora de Colombia" : "Cambiar a tu hora local"}
+              className={`liquid-glass !rounded-full px-3 sm:px-4 py-1.5 font-mono text-[10px] sm:text-[11px] tracking-widest transition-colors ${
+                isLocal ? "text-blue border-blue/40" : "text-cream/70 hover:text-cream"
+              }`}
+            >
+              🕐 {isLocal ? "TU HORA" : "COL"}
+            </button>
             <div className="hidden sm:flex items-center gap-2 liquid-glass !rounded-full px-4 py-1.5">
               <span className="pulse-dot" />
               <span className="font-anton text-xs sm:text-sm tracking-widest text-neon">EN VIVO</span>
