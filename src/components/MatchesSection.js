@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BarFill from "./BarFill";
 import Reveal from "./Reveal";
 import TeamBadge from "./TeamBadge";
 import KickoffTime from "./KickoffTime";
@@ -21,7 +22,7 @@ function StatBar({ label, left, right, color, pct }) {
         </span>
       </div>
       <div className="stat-bar">
-        <span className={color} data-bar={pct} style={{ width: "0%" }} />
+        <BarFill pct={pct} className={color} />
       </div>
     </div>
   );

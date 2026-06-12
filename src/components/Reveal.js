@@ -12,9 +12,6 @@ export default function Reveal({ children, className = "", delay = 0, as: Tag = 
       ([entry]) => {
         if (entry.isIntersecting) {
           el.classList.add("in");
-          el.querySelectorAll("[data-bar]").forEach((bar) => {
-            bar.style.width = bar.getAttribute("data-bar") + "%";
-          });
           io.unobserve(el);
         }
       },

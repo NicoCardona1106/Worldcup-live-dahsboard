@@ -5,6 +5,7 @@ import Reveal from "./Reveal";
 import LiveTicker from "./LiveTicker";
 import TeamBadge from "./TeamBadge";
 import BackgroundVideo from "./BackgroundVideo";
+import BarFill from "./BarFill";
 import Countdown from "./Countdown";
 import MatchActions from "./MatchActions";
 import { useLiveMatches } from "@/hooks/useLiveData";
@@ -198,7 +199,7 @@ export default function Hero() {
                       <span className="text-cream">{s.value}</span>
                     </div>
                     <div className="stat-bar">
-                      <span className={s.color} data-bar={s.barPct} style={{ width: "0%" }} />
+                      <BarFill pct={s.barPct} className={s.color} />
                     </div>
                   </div>
                 ))}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import BarFill from "./BarFill";
 import Reveal from "./Reveal";
 import Counter from "./Counter";
 import TeamBadge from "./TeamBadge";
@@ -72,7 +73,7 @@ function TopScorers() {
             <TeamBadge flag={s.flag} size="text-xl" />
             <span className="font-mono text-sm flex-1 truncate">{s.name}</span>
             <div className="w-24 sm:w-32 stat-bar">
-              <span className="bg-gold" data-bar={(s.goals / max) * 100} style={{ width: "0%" }} />
+              <BarFill pct={(s.goals / max) * 100} className="bg-gold" />
             </div>
             <span className="font-anton text-neon w-6 text-right">{s.goals}</span>
           </li>
