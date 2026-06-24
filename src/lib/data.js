@@ -101,6 +101,21 @@ export const groups = {
   ],
 };
 
+// World Cup 2026: top 2 of each of the 12 groups advance automatically (24
+// teams) plus the 8 best third-placed teams (32 total) to round of 32. FIFA's
+// tiebreak among thirds is points, then goal difference, then goals scored;
+// anything beyond that (fair play points, drawing of lots) we don't have data
+// for and is rare enough not to fake. `gf`/`difNum` are absent on placeholder
+// sample data, hence the `?? 0` fallbacks — sorting just degrades to
+// points-only for the sample groups, which is fine since it's not live truth.
+export function getBestThirds(groups, advanceCount = 8) {
+  return Object.entries(groups)
+    .map(([group, teams]) => teams[2] && { ...teams[2], group })
+    .filter(Boolean)
+    .sort((a, b) => b.pts - a.pts || (b.difNum ?? 0) - (a.difNum ?? 0) || (b.gf ?? 0) - (a.gf ?? 0))
+    .map((t, i) => ({ ...t, advances: i < advanceCount }));
+}
+
 export const tournamentStats = [
   { value: "64", label: "PARTIDOS", color: "text-neon" },
   { value: "172", label: "GOLES", color: "text-gold" },

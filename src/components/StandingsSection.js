@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import BarFill from "./BarFill";
 import FreshnessBadge from "./FreshnessBadge";
 import Reveal from "./Reveal";
 import Counter from "./Counter";
 import TeamBadge from "./TeamBadge";
 import { useLiveStandings, useLiveTournamentStats, useLiveTopScorers } from "@/hooks/useLiveData";
-import { groups as placeholderGroups, tournamentStats, topScorers, isColombia } from "@/lib/data";
+import { groups as placeholderGroups, tournamentStats, topScorers, isColombia, getBestThirds } from "@/lib/data";
 
 function GroupTable({ name, teams, delay = 0 }) {
   return (
@@ -48,6 +48,62 @@ function GroupTable({ name, teams, delay = 0 }) {
                 <td className="text-center py-2.5">{t.p}</td>
                 <td className="text-center py-2.5 tabular-nums">{t.dif ?? "—"}</td>
                 <td className={`text-center py-2.5 font-anton ${col ? "text-gold" : t.top ? "text-neon" : "text-cream"}`}>{t.pts}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Reveal>
+  );
+}
+
+function BestThirds({ groups }) {
+  const thirds = useMemo(() => getBestThirds(groups), [groups]);
+  if (!thirds.length) return null;
+
+  return (
+    <Reveal className="liquid-glass px-6 sm:px-8 py-7">
+      <h3 className="font-anton text-2xl tracking-wide mb-2">MEJORES TERCEROS</h3>
+      <p className="font-mono text-[11px] text-cream/50 mb-5">
+        Los 8 mejores terceros avanzan a dieciseisavos. Criterio: puntos → diferencia de gol → goles a favor.
+      </p>
+      <table className="w-full font-mono text-xs sm:text-sm">
+        <thead>
+          <tr className="text-cream/40 tracking-widest text-[10px] sm:text-[11px] border-b border-cream/10">
+            <th className="text-left font-normal pb-3">#</th>
+            <th className="text-left font-normal pb-3">EQUIPO</th>
+            <th className="text-left font-normal pb-3">GRUPO</th>
+            <th className="font-normal pb-3">PJ</th>
+            <th className="font-normal pb-3">DIF</th>
+            <th className="font-normal pb-3">PTS</th>
+            <th className="text-right font-normal pb-3">ESTADO</th>
+          </tr>
+        </thead>
+        <tbody>
+          {thirds.map((t, i) => {
+            const col = isColombia(t.team);
+            return (
+              <tr
+                key={t.group}
+                className={`border-b border-cream/5 transition-colors hover:bg-cream/5 ${
+                  col ? "bg-gold/10 text-gold" : t.advances ? "text-neon" : "text-cream/40"
+                }`}
+              >
+                <td className="py-2.5">{i + 1}</td>
+                <td className="py-2.5">
+                  <span className="inline-flex items-center gap-2">
+                    {col && <span className="text-gold">★</span>}
+                    <TeamBadge flag={t.flag} size="text-base" />
+                    <span className="font-anton text-[11px] sm:text-xs tracking-wide">{t.team.toUpperCase()}</span>
+                  </span>
+                </td>
+                <td className="py-2.5 text-cream/50">{t.group.replace("GRUPO ", "")}</td>
+                <td className="text-center py-2.5">{t.pj}</td>
+                <td className="text-center py-2.5 tabular-nums">{t.dif ?? "—"}</td>
+                <td className={`text-center py-2.5 font-anton ${t.advances ? "text-neon" : "text-cream"}`}>{t.pts}</td>
+                <td className="text-right py-2.5 text-[10px] tracking-widest">
+                  {t.advances ? "CLASIFICA" : "ELIMINADO"}
+                </td>
               </tr>
             );
           })}
@@ -112,6 +168,7 @@ export default function StandingsSection() {
           <div className="liquid-glass !rounded-full p-1 inline-flex">
             {[
               { id: "clasificacion", label: "GRUPOS" },
+              { id: "terceros", label: "MEJORES TERCEROS" },
               { id: "goleadores", label: "GOLEADORES" },
             ].map((t) => (
               <button
@@ -132,6 +189,10 @@ export default function StandingsSection() {
             {groupNames.map((name, i) => (
               <GroupTable key={name} name={name} teams={groups[name]} delay={i * 90} />
             ))}
+          </div>
+        ) : tab === "terceros" ? (
+          <div className="max-w-3xl mb-20">
+            <BestThirds groups={groups} />
           </div>
         ) : (
           <div className="max-w-2xl mb-20">

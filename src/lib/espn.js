@@ -374,15 +374,20 @@ export async function fetchTournamentOverview() {
  * for the World Cup, so we build one ourselves from each played/live match's
  * summary (`competitions[0].details`, where `scoringPlay: true` entries carry
  * the scorer as `participants[0].athlete`). Own goals are excluded — they
- * count for the table but never for an individual's tally. Capped to a
- * handful of the most recent matches so this stays cheap even mid-tournament.
+ * count for the table but never for an individual's tally.
+ *
+ * Every played/live match is included (no recency cap): each summary is
+ * fetched with `revalidate: 600`, so Next's fetch cache — not an arbitrary
+ * slice of `eventIds` — is what keeps this cheap. A cap here would silently
+ * drop goals from earlier matches once the tournament passes that many games
+ * (confirmed: with a 20-match cap, 28 of the 48 matches played so far were
+ * being ignored), which is wrong rather than just less fresh.
  */
 export async function fetchTopScorers(eventIds) {
-  const ids = eventIds.slice(-20);
-  if (ids.length === 0) return [];
+  if (eventIds.length === 0) return [];
 
   const settled = await Promise.allSettled(
-    ids.map((id) =>
+    eventIds.map((id) =>
       fetch(`${SUMMARY_URL}?event=${id}`, { next: { revalidate: 600 } }).then((r) => (r.ok ? r.json() : null))
     )
   );
@@ -413,10 +418,17 @@ export async function fetchTopScorers(eventIds) {
   return [...tally.values()].sort((a, b) => b.goals - a.goals).slice(0, 5);
 }
 
+// ESPN's own computed rank for a standings entry — accounts for whatever
+// tiebreak rules it already applied (points, then goal difference, etc.),
+// so we trust it instead of re-deriving a ranking ourselves.
+function entryRank(entry) {
+  return entry.note?.rank ?? entry.stats?.find((s) => s.name === "rank")?.value ?? 99;
+}
+
 /** Maps one ESPN standings `entry` into the shape our group tables expect. */
 function transformStandingsEntry(entry) {
   const stat = (name) => entry.stats?.find((s) => s.name === name)?.value ?? 0;
-  const rank = entry.note?.rank ?? stat("rank");
+  const rank = entryRank(entry);
   return {
     team: entry.team?.shortDisplayName || entry.team?.displayName || "—",
     flag: entry.team?.logo || entry.team?.logos?.[0]?.href || null,
@@ -426,6 +438,11 @@ function transformStandingsEntry(entry) {
     p: stat("losses"),
     // Goal difference, signed as ESPN displays it ("+2", "-1", "0").
     dif: entry.stats?.find((s) => s.name === "pointDifferential")?.displayValue ?? null,
+    // Numeric goal difference and goals scored — kept alongside the display
+    // string above so callers (e.g. the best-thirds ranking) can sort without
+    // parsing a formatted string.
+    difNum: entry.stats?.find((s) => s.name === "pointDifferential")?.value ?? 0,
+    gf: stat("pointsFor"),
     pts: stat("points"),
     top: rank > 0 && rank <= 2,
   };
@@ -463,7 +480,12 @@ export async function fetchStandings() {
     const entries = child?.standings?.entries || [];
     if (!entries.length) continue;
     const label = (child.name || "").toUpperCase().replace("GROUP", "GRUPO");
-    groups[label] = entries.map(transformStandingsEntry);
+    // ESPN does not guarantee `entries` arrives in rank order (verified: ties
+    // can appear out of order) — sort explicitly so position in the table
+    // always matches actual standing, and so "3rd place" is reliably the
+    // element at index 2 for the best-thirds ranking downstream.
+    const sorted = [...entries].sort((a, b) => entryRank(a) - entryRank(b));
+    groups[label] = sorted.map(transformStandingsEntry);
   }
   return groups;
 }
